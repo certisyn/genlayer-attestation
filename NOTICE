@@ -1,0 +1,26 @@
+CertisynAttestation
+Copyright (c) 2026 Certisyn, Inc.
+
+This software is released under the MIT License. See LICENSE.
+
+The MIT grant covers this source code and nothing else. In particular it
+conveys no rights in, and no licence is granted to:
+
+  TRADEMARKS. "Certisyn" and the Certisyn marks, logos and trade dress are
+  trademarks of Certisyn, Inc. The permission granted in LICENSE does not
+  include permission to use them. Use this code freely; do not imply that
+  Certisyn endorses, certifies or produced your fork.
+
+  PATENTS. Certisyn, Inc. holds and continues to file patents covering
+  verification, coverage attestation and determination methods. The MIT
+  License grants copyright permissions only and grants no patent licence,
+  express or implied, beyond what is necessary to use this source as
+  published.
+
+  DETERMINATIONS. Nothing here makes a Certisyn determination, and running
+  this contract does not produce one. It records what an independent
+  committee observed when reading a determination Certisyn published.
+
+  ENDPOINTS. The Certisyn endpoints this contract reads are operated by
+  Certisyn, Inc. and are subject to change. They carry no availability
+  commitment to users of this code.
