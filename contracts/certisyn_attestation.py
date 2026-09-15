@@ -1,38 +1,4 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-#
-# CertisynAttestation
-# -------------------
-# A GenLayer Intelligent Contract that records what an independent committee
-# of validators observed when it read a Certisyn determination endpoint.
-#
-# What the committee actually agrees on
-#   Each validator fetches the endpoint itself, over its own network path,
-#   from its own geography. It canonicalises the JSON, digests it, and
-#   digests the raw bytes as well. Only those digests, the HTTP status and
-#   the byte count cross the equivalence principle. Raw web content never
-#   reaches strict equality, so GL-S03 is satisfied and the committee cannot
-#   be split by whitespace, key order or transport framing.
-#
-# Why this is evidence and not decoration
-#   Certisyn does not operate a single GenLayer validator. A unanimous
-#   ACCEPTED round is therefore a statement by parties with no interest in
-#   the outcome that the determination they each read was the same document,
-#   and that its digest matched the one the submitter declared BEFORE the
-#   read. In Certisyn's evidence grid that is E3 - independent - at the
-#   BEFORE boundary. Self-attestation cannot reach that cell by construction.
-#
-# Refusal is a recorded outcome, not an error
-#   If the endpoint is unreachable, does not answer 200, does not parse, or
-#   answers with a digest other than the one declared, the contract records
-#   that fact and says so. It does not fabricate an attestation, and it does
-#   not throw the observation away. A verifier that can only say yes is not
-#   a verifier.
-#
-# The one failure mode worth naming
-#   If the document changes between one validator's read and another's - a
-#   redeployment landing inside the consensus round - the digests differ and
-#   strict equality fails. That is correct behaviour. The committee declines
-#   to attest a document that moved while it was being read.
 
 from genlayer import *
 
@@ -41,6 +7,9 @@ from dataclasses import dataclass
 import hashlib
 import json
 import typing
+
+# CertisynAttestation - Certisyn, Inc. - MIT
+# Full annotated source: https://github.com/certisyn/genlayer-attestation
 
 
 OUTCOME_ATTESTED = "attested"
@@ -78,11 +47,8 @@ class CertisynAttestation(gl.Contract):
         self.record_count = u256(0)
         self.latest_id = ""
 
-    # ---------------------------------------------------------------- read
 
     def _observe(self) -> dict[str, typing.Any]:
-        # Bound to a local before the closure so that nothing inside the
-        # non-deterministic block touches contract storage.
         endpoint = str(self.endpoint)
 
         def observe() -> dict[str, typing.Any]:
@@ -134,7 +100,6 @@ class CertisynAttestation(gl.Contract):
 
         return gl.eq_principle.strict_eq(observe)
 
-    # --------------------------------------------------------------- write
 
     @gl.public.write
     def attest(
@@ -177,7 +142,6 @@ class CertisynAttestation(gl.Contract):
 
         return record_id
 
-    # ---------------------------------------------------------------- view
 
     @gl.public.view
     def get_endpoint(self) -> str:

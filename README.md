@@ -15,6 +15,25 @@ the endpoint itself, reduces the document to a canonical digest, and the digests
 are compared. What lands on chain is a statement by parties with no interest in
 the outcome, checked against a digest the submitter declared **before** the read.
 
+## Proven on Asimov
+
+Live, unanimous, 15 September 2026.
+
+```
+contract   0x96db0Ba9E4F31eB4Ec12bAFf92Ed458a46742890
+attest tx  0xcd208acef27fb8c0597c24af1d87cf7e6814407821a00ca6cdd9a900193d8b3e
+status     ACCEPTED    execution FINISHED_WITH_RETURN    result AGREE
+votes      AGREE, AGREE, AGREE, AGREE, AGREE   (5 of 5)
+outcome    attested
+```
+
+Five validators, none of them operated by Certisyn, each read the endpoint over
+its own network path and agreed on its digest - against a value declared in the
+transaction before any of them read anything.
+
+Full record, and the three traps that cost hours to find, in
+[RUN-RECORD.md](RUN-RECORD.md).
+
 ## Why this is not a toy
 
 Self-attestation cannot establish independence, by construction. A vendor
@@ -129,6 +148,12 @@ genlayer call <address> get_latest
 
 Pass an empty string as the first argument to record an observation without
 asserting an expected digest.
+
+**Before you run that**, read [RUN-RECORD.md](RUN-RECORD.md). CLI 0.39.2 sends
+the bare gas estimate and every deploy reverts with `FailedCall()`; 0.40.0-rc.3
+never broadcasts at all on this chain; and a second `#` comment line under the
+`Depends` header fails the contract inside GenVM while still reporting
+`ACCEPTED`. All three are documented there with fixes.
 
 ## ABI
 
