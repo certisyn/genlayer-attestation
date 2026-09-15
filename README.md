@@ -31,7 +31,7 @@ Five validators, none of them operated by Certisyn, each read the endpoint over
 its own network path and agreed on its digest - against a value declared in the
 transaction before any of them read anything.
 
-Full record, and the three traps that cost hours to find, in
+Full record, and four platform behaviours characterised along the way, in
 [RUN-RECORD.md](RUN-RECORD.md).
 
 ## Why this is not a toy
@@ -149,11 +149,11 @@ genlayer call <address> get_latest
 Pass an empty string as the first argument to record an observation without
 asserting an expected digest.
 
-**Before you run that**, read [RUN-RECORD.md](RUN-RECORD.md). CLI 0.39.2 sends
-the bare gas estimate and every deploy reverts with `FailedCall()`; 0.40.0-rc.3
-never broadcasts at all on this chain; and a second `#` comment line under the
-`Depends` header fails the contract inside GenVM while still reporting
-`ACCEPTED`. All three are documented there with fixes.
+**Read [RUN-RECORD.md](RUN-RECORD.md) first.** CLI 0.39.2 passes the bare gas
+estimate and deploys revert with `FailedCall()`; 0.40.0-rc.3 does not broadcast
+on this chain; and a second `#` comment line beneath the `Depends` header fails
+the contract inside GenVM while the transaction still reports `ACCEPTED`. Each is
+documented there with its working configuration.
 
 ## ABI
 

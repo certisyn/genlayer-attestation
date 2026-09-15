@@ -43,48 +43,48 @@ geography, produced that same hash. The byte-stability of the endpoint was an
 open question that could not be settled from one vantage point. It has now been
 settled by parties with no interest in the answer.
 
-## Three traps, for anyone else deploying to Asimov
+## Platform behaviours characterised during this deployment
 
-Reproducing this took several hours, almost none of it spent on the contract.
+Four, each reproducible. None of them concern the contract.
 
-**1. A second comment line under the `Depends` header breaks the runner.**
-This file's first line is the `Depends` header and its second line is blank. Put
-any other `#` line directly beneath the header and GenVM fails with:
+**1. The GenVM runner parse consumes beyond line 1.**
+This file's first line is the `Depends` header and its second line is blank. A
+second `#` line directly beneath the header produces:
 
 ```
 target: genvm::runners::parse
 error: { causes: [ 'trailing characters at line 1 column 84' ] }
 ```
 
-Column 84 is the character after the 83-character header. The parse consumes
-more than the first line. The transaction still reports `status: ACCEPTED` and
-still returns a contract address, but with
-`txExecutionResultName: FINISHED_WITH_ERROR`, and the contract does not exist.
-A module docstring in that position fails the same way.
+Column 84 is the character immediately after the 83-character header. The outer
+transaction reports `status: ACCEPTED` and returns a contract address; execution
+reports `txExecutionResultName: FINISHED_WITH_ERROR` and no contract exists. A
+module docstring in that position behaves identically. A failure that reports
+success at the layer most callers check is worth surfacing.
 
-**2. CLI 0.39.2 sends the bare gas estimate with no headroom.**
-An inner call in the ghost-factory deploy path runs out of gas, returns empty
-revert data, and OpenZeppelin's `Address` library converts that into
-`FailedCall()` - selector `0xd6bda275`. Every deploy reverts with EVM
-`status 0x0`. When gas estimation fails on the RPC the CLI falls back to a flat
-200,000, which is far below the roughly 1.38M a deploy needs.
+**2. CLI 0.39.2 passes the bare gas estimate as the gas limit.**
+An inner call in the ghost-factory deploy path exhausts gas, returns empty revert
+data, and OpenZeppelin's `Address` converts that into `FailedCall()` - selector
+`0xd6bda275`. Deploys revert at EVM `status 0x0`. Where estimation fails on the
+RPC the fallback is a flat 200,000 against roughly 1.38M required.
 
 Release candidate 0.40.0-rc.3 adds the headroom, but ships genlayer-js v2, whose
 `addTransaction` calldata Asimov's consensus contract does not accept - its gas
 estimation reverts every time and it never broadcasts at all.
 
-What worked: 0.39.2, with `gas: estimatedGas` changed to `gas: estimatedGas * 2n`
-in the bundled `genlayer-js`. Unused gas is refunded, so headroom costs nothing.
-3x overshoots the block limit on a 7KB contract and is rejected with
-`gas limit too high`.
+Working configuration: 0.39.2 with `gas: estimatedGas` changed to
+`gas: estimatedGas * 2n` in the bundled `genlayer-js`. Unused gas is refunded, so
+headroom costs nothing. 3x overshoots the block limit on a 7KB contract and is
+rejected with `gas limit too high`.
 
-**3. `--fee-value` is silently discarded on 0.39.2.**
-The CLI parses it into a fees object and hands it to genlayer-js 1.1.8, which has
-no fee support at all. The transaction goes out with `value = 0x0` regardless.
-That is harmless on Asimov, which uses the v6 non-fee `addTransaction` ABI, but
-it sends you hunting for a fee problem that is not there. Do not pass it.
+**3. `--fee-value` is accepted by the CLI and discarded by the SDK.**
+CLI 0.39.2 parses it into a fees object and hands it to genlayer-js 1.1.8, which
+carries no fee support. The transaction goes out at `value = 0x0` regardless.
+Harmless on Asimov, which uses the v6 non-fee `addTransaction` ABI, but it points
+diagnosis at a fee problem that does not exist. Omit it.
 
-Separately, the Asimov RPC does not implement `net_version`. MetaMask's manual
-"Add a network" flow calls it, gets `method not found`, and reports
-"Could not fetch chain ID" - misleading, since `eth_chainId` returns `0x107d`
-correctly. The faucet's one-click add works; only the manual path breaks.
+**4. The Asimov RPC does not implement `net_version`.**
+MetaMask's manual "Add a network" flow calls it, receives `method not found`, and
+surfaces "Could not fetch chain ID" - which misdirects, since `eth_chainId`
+returns `0x107d` correctly. The faucet's one-click add is unaffected; only the
+manual path breaks.
