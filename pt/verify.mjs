@@ -170,25 +170,39 @@ async function main() {
 
   let drandOk = 0; let nistOk = 0; let seedOk = 0; let selOk = 0; let futureOk = 0;
   const complaints = [];
+  // A beacon value that cannot be fetched is a failed check with a name, not a
+  // crash. drand answers 425 and NIST answers 404 for a value that does not
+  // exist, and a document quoting a round or pulse that has never published is
+  // exactly the kind of thing this is here to catch - so it has to be reported
+  // as that check failing rather than aborting the run.
+  const tryJson = async (url) => { try { return await getJson(url); } catch (e) { return { __error: e.message }; } };
+
   for (const r of reps) {
     const tag = `replicate ${r.i}`;
 
-    const d = await getJson(`https://api.drand.sh/v2/chains/${DRAND_CHAIN}/rounds/${r.beacons.drand.committed_round}`);
-    const randomness = sha256(Buffer.from(d.signature, 'hex')).toString('hex');
-    if (d.round === r.beacons.drand.committed_round
-      && d.signature === r.beacons.drand.signature
-      && randomness === r.beacons.drand.randomness) drandOk++;
-    else complaints.push(`${tag}: drand mismatch`);
+    const d = await tryJson(`https://api.drand.sh/v2/chains/${DRAND_CHAIN}/rounds/${r.beacons.drand.committed_round}`);
+    if (d.__error) complaints.push(`${tag}: drand round ${r.beacons.drand.committed_round} - ${d.__error}`);
+    else {
+      const randomness = sha256(Buffer.from(d.signature, 'hex')).toString('hex');
+      if (d.round === r.beacons.drand.committed_round
+        && d.signature === r.beacons.drand.signature
+        && randomness === r.beacons.drand.randomness) drandOk++;
+      else complaints.push(`${tag}: drand round ${r.beacons.drand.committed_round} does not carry the quoted signature`);
+    }
 
     const nUrl = `https://beacon.nist.gov/beacon/2.0/chain/${r.beacons.nist.chain_index}/pulse/${r.beacons.nist.committed_pulse}`;
-    const nj = await getJson(nUrl);
-    const nOut = String(nj.pulse.outputValue).toLowerCase();
-    const nTs = String(nj.pulse.timeStamp);
-    const nMs = Date.parse(nTs.endsWith('Z') ? nTs : nTs + 'Z');
-    if (Number(nj.pulse.pulseIndex) === r.beacons.nist.committed_pulse
-      && nOut === r.beacons.nist.output_value
-      && Math.abs(nMs - Date.parse(r.beacons.nist.expected_time)) <= NIST_PERIOD_S * 1000) nistOk++;
-    else complaints.push(`${tag}: nist mismatch`);
+    const nj = await tryJson(nUrl);
+    let nMs = NaN;
+    if (nj.__error) complaints.push(`${tag}: nist pulse ${r.beacons.nist.committed_pulse} - ${nj.__error}`);
+    else {
+      const nOut = String(nj.pulse.outputValue).toLowerCase();
+      const nTs = String(nj.pulse.timeStamp);
+      nMs = Date.parse(nTs.endsWith('Z') ? nTs : nTs + 'Z');
+      if (Number(nj.pulse.pulseIndex) === r.beacons.nist.committed_pulse
+        && nOut === r.beacons.nist.output_value
+        && Math.abs(nMs - Date.parse(r.beacons.nist.expected_time)) <= NIST_PERIOD_S * 1000) nistOk++;
+      else complaints.push(`${tag}: nist pulse ${r.beacons.nist.committed_pulse} does not carry the quoted output`);
+    }
 
     const seed = sha256(Buffer.concat([
       Buffer.from(r.beacons.drand.randomness, 'hex'),
@@ -209,8 +223,8 @@ async function main() {
     // BOTH beacon operators at once to move it.
     const regAt = Date.parse(r.registered_at);
     const drandTimeMs = (DRAND_GENESIS + (r.beacons.drand.committed_round - 1) * DRAND_PERIOD) * 1000;
-    if (drandTimeMs > regAt && nMs > regAt) futureOk++;
-    else complaints.push(`${tag}: a committed beacon value already existed at registration`);
+    if (Number.isFinite(nMs) && drandTimeMs > regAt && nMs > regAt) futureOk++;
+    else complaints.push(`${tag}: a committed beacon value already existed at registration, or could not be read`);
   }
   const N = reps.length;
   check(N === cp.pooled.replicates && N === cp.per_replicate.length,
@@ -220,7 +234,7 @@ async function main() {
   check(seedOk === N, 'every selection seed is the digest of both beacons and the case list', `${seedOk}/${N}`);
   check(selOk === N, 'every control selection replays exactly', `${selOk}/${N}, ${k} of ${ids.length} each`);
   check(futureOk === N, 'both beacon commitments postdate the replicate registration', `${futureOk}/${N}`);
-  for (const c of complaints.slice(0, 8)) note('detail', c);
+  for (const c of complaints) note('detail', c);
 
   // ---- 9 and 10. the whole log replays -------------------------------------
   // Not just the tree head: every leaf is rebuilt from published data. A case

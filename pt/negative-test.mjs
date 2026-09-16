@@ -35,10 +35,22 @@ const checkpointCases = [
 
 const corpusCases = [
   ['a case removed from the corpus', (c) => { c.cases.pop(); }],
-  ['a control reclassified', (c) => { c.replicate_records[0].controls[0] = c.cases[0].case_id; }],
+  ['a control reclassified', (c) => {
+    const r = c.replicate_records[0];
+    const swapIn = c.cases.map((x) => x.case_id).find((id) => !r.controls.includes(id));
+    r.controls[0] = swapIn;
+  }],
   ['a replicate back-dated to after its beacons', (c) => { c.replicate_records[0].registered_at = new Date(Date.now() + 86_400e3).toISOString(); }],
   ['the decision rule rewritten after the run', (c) => { c.decision_rule.fault_offset_m = 1; }],
-  ['a drand round swapped for another', (c) => { c.replicate_records[0].beacons.drand.committed_round += 1000; }],
+  // Two shapes, deliberately. A round or pulse in the future does not exist, so
+  // the beacon answers 425 or 404; an earlier one does exist but carries a
+  // different value. The first tests that an unreadable beacon is reported as a
+  // failed check rather than aborting the run, the second that a real but wrong
+  // value is caught on its content.
+  ['a drand round swapped for one that has not published', (c) => { c.replicate_records[0].beacons.drand.committed_round += 1000; }],
+  ['a drand round swapped for an earlier real one', (c) => { c.replicate_records[0].beacons.drand.committed_round -= 1000; }],
+  ['a NIST pulse swapped for one that has not published', (c) => { c.replicate_records[0].beacons.nist.committed_pulse += 1000; }],
+  ['a NIST pulse swapped for an earlier real one', (c) => { c.replicate_records[0].beacons.nist.committed_pulse -= 100; }],
   ['a NIST pulse output edited', (c) => { c.replicate_records[0].beacons.nist.output_value = 'f'.repeat(128); }],
   ['a selection seed edited to justify the controls', (c) => { c.replicate_records[0].seed = '0'.repeat(64); }],
   ['a replicate dropped from the corpus', (c) => { c.replicate_records.pop(); }],
@@ -84,6 +96,17 @@ const ENDPOINT_CHECK = 'the committee read the URL this verifier read';
 const failures = (out) => out.split('\n').filter((l) => l.trim().startsWith('FAIL'))
   .map((l) => l.replace(/^\s*FAIL\s+/, '').split('   ')[0].trim());
 
+// A refusal counts whether it arrives as a named failed check or as the
+// verifier declining to finish at all (exit 2). Counting only named failures
+// scored an outright abort as a pass, which is the failure mode this harness
+// exists to find - so it is tested for here too.
+const refused = ({ code, out }) => code === 2 || failures(out).some((x) => x !== ENDPOINT_CHECK);
+const reason = ({ code, out }) => {
+  const f = failures(out).filter((x) => x !== ENDPOINT_CHECK);
+  if (f.length) return f[0];
+  return code === 2 ? 'the verifier refused to finish' : '';
+};
+
 const load = (mutate, which) => {
   state.checkpoint = clone(real['checkpoint.json']);
   state.corpus = clone(real['corpus.json']);
@@ -102,17 +125,17 @@ if (!baselineOk) { bad++; console.log(honest.out); }
 
 for (const [label, mutate] of checkpointCases) {
   load(mutate, 'checkpoint');
-  const { out } = await run();
-  const f = failures(out).filter((x) => x !== ENDPOINT_CHECK);
-  console.log(`  ${f.length ? 'REFUSED' : 'LET THROUGH - BAD'} ${label}${f.length ? '   (' + f[0] + ')' : ''}`);
-  if (!f.length) bad++;
+  const r = await run();
+  const ok = refused(r);
+  console.log(`  ${ok ? 'REFUSED' : 'LET THROUGH - BAD'} ${label}${ok ? '   (' + reason(r) + ')' : ''}`);
+  if (!ok) bad++;
 }
 for (const [label, mutate] of corpusCases) {
   load(mutate, 'corpus');
-  const { out } = await run();
-  const f = failures(out).filter((x) => x !== ENDPOINT_CHECK);
-  console.log(`  ${f.length ? 'REFUSED' : 'LET THROUGH - BAD'} ${label}${f.length ? '   (' + f[0] + ')' : ''}`);
-  if (!f.length) bad++;
+  const r = await run();
+  const ok = refused(r);
+  console.log(`  ${ok ? 'REFUSED' : 'LET THROUGH - BAD'} ${label}${ok ? '   (' + reason(r) + ')' : ''}`);
+  if (!ok) bad++;
 }
 
 server.close();
