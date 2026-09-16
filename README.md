@@ -104,13 +104,15 @@ to production while a committee is mid-round on a determination.
 ## Measured reproducibility
 
 The design assumes the endpoint is byte-stable across validator geographies.
-That was measured rather than assumed, and the first evidence collected was
-worthless.
+That was measured rather than assumed, and the first sample was rejected on
+inspection of the transport.
 
-Fourteen consecutive fetches returned identical bytes - but the response headers
-showed `x-vercel-cache: HIT` with `age` climbing against `s-maxage=3600`. All
-fourteen observations were one cached object replayed from one edge. Effective
-sample size: 1. A cache-busting query string did not change the cache key.
+Fourteen consecutive fetches returned identical bytes. The response headers
+showed `x-vercel-cache: HIT` with `age` climbing against `s-maxage=3600`: all
+fourteen observations were one cached object replayed from one edge, an
+effective sample size of 1. A cache-busting query string did not change the
+cache key. Reading the headers before the bytes is what distinguished fourteen
+observations from one.
 
 The real evidence came from a hostname with its own cache namespace, which
 returned `x-vercel-cache: PRERENDER` carrying the identical content hash. The
@@ -198,110 +200,137 @@ it could not determine is not offering verification; it is offering reassurance.
 
 ## Proficiency testing, and how to check it yourself
 
-Attestation establishes that a document is the one Certisyn published. It says
-nothing about whether the determination inside it is right. That is a different
-question and it takes a different instrument.
+Attestation establishes that a document is the one Certisyn published. It says nothing about
+whether the determination inside it is right. That is a different question and it takes a
+different instrument.
 
-`pt/` carries a proficiency test in the ISO/IEC 17043 sense, run against the
-production orbital register - the same function the product calls, not a stub.
-Cases are minted from a Copernicus Sentinel-1 AUX_POEORB precise orbit. A
-quarter of them carry a seeded 120 km displacement. Which quarter is decided by
-a drand League of Entropy round that had not published when the decision rule
-was registered, so the selection was unavailable to anyone - including Certisyn
-- at the moment the rule was fixed. The run is logged as an RFC 6962 Merkle
-tree, the head is signed, and the signed document is attested by the committee.
+`pt/` carries a proficiency scheme in the ISO/IEC 17043 sense, run against the production orbital
+register - the same function the product calls, not a stub. Cases are minted from a Copernicus
+Sentinel-1 AUX_POEORB precise orbit. A quarter of them carry a seeded 120 km displacement. Which
+quarter is decided by two independent public beacons that had not published when the replicate
+was registered, so the selection was unavailable to anyone - Certisyn included - at the moment
+the decision rule was fixed. The run is logged as an RFC 6962 Merkle tree, the head is signed,
+and the signed document is attested by a committee of validators Certisyn does not operate.
 
-Check it yourself. Needs node, nothing else, no install:
+### Two beacons, because they fail differently
+
+| beacon | shape | period | unpublished value answers |
+|---|---|---|---|
+| drand quicknet | threshold BLS, League of Entropy, many operators | 3 s | `425 Too Early` |
+| NIST Randomness Beacon 2.0 | one US federal instrument, own hardware | 60 s | `404 Not Found` |
+
+The selection seed is `sha256(drand_randomness || nist_output || case_list_root)`. Steering the
+selection requires both operators at the same time, and the case list is already committed before
+either beacon is named, so neither can be chosen to suit the other. Certisyn operates neither
+beacon and runs no randomness service of its own.
+
+### The published series
+
+Eight replicates, 16 September 2026, register `S1.orbital_feasible`, 60 cases per replicate from
+one reference record.
+
+```
+480 case judgements   120 seeded   360 clean
+
+detected     119 of 120        missed 1
+false flags    0 of 360
+
+sensitivity  0.9917   95% CI [0.9543, 0.9985]
+specificity  1.0000   95% CI [0.9894, 1.0000]
+Cohen kappa  0.9944
+```
+
+The interval is Wilson, not the normal approximation. At a proportion of 1.0 the normal
+approximation returns [1, 1], which would state a detection floor of 100 percent from a finite
+sample. Wilson keeps the lower bound below 1, which is the shape of claim a bounded run can
+actually support. **The register misses roughly one seeded 120 km displacement in 120, and the
+floor is bounded at 95.4 percent, not claimed at 100.**
+
+### Check it yourself
+
+No install, no dependencies, no permission from Certisyn:
 
 ```bash
 node pt/verify.mjs
 ```
 
-It fetches the checkpoint, the corpus, the drand round and the on-chain record
-from their own sources and establishes eight things:
+It fetches the checkpoint, the corpus, every drand round, every NIST pulse and the on-chain
+record from their own sources, and establishes thirteen things:
 
 | # | check |
 |---|---|
-| 1 | the checkpoint signature verifies under the published key |
-| 2 | that signature **binds the score** - editing it breaks the signature |
-| 3 | the beacon round is real and the randomness derives from its signature |
-| 4 | the case list hashes to the committed root |
-| 5 | the control selection replays exactly from that root and that beacon |
-| 6 | the entire log replays, leaf by leaf, to the published tree head |
-| 7 | the committed round had not published when the rule was registered |
-| 8 | a committee Certisyn does not operate attested this exact document |
+| 1 | the checkpoint declares the canonical form it was signed in |
+| 2 | the signature verifies under the published key |
+| 3 | that signature **binds the score** - editing any published number breaks it |
+| 4 | every drand round is real and its randomness derives from its signature |
+| 5 | every NIST pulse is real and lands where the commitment said it would |
+| 6 | every selection seed is the digest of both beacon outputs and the case list |
+| 7 | every control selection replays exactly |
+| 8 | both beacon commitments postdate the replicate's registration |
+| 9 | the case list hashes to the committed root |
+| 10 | the whole log replays, leaf by leaf, to the published tree head |
+| 11 | the pooled figures recompute from the per-replicate figures |
+| 12 | the Wilson intervals recompute from the pooled counts |
+| 13 | a committee Certisyn does not operate attested this exact document |
 
-Check 2 is not a formality. The first published checkpoint was signed with
-`JSON.stringify(obj, Object.keys(obj).sort())`, which looks like a
-canonicaliser and is not: the array replacer filters keys at every depth, so the
-nested score serialised as `{}` and fell outside the signature. Two checkpoints
-with entirely different scores produced byte-identical signing bodies. Found by
-writing the verifier, which is the argument for writing one. The signing form is
-now declared in the document as `canon_alg` and check 2 fails loudly if it ever
-regresses.
+Check 3 carries weight. The first published checkpoint was signed with
+`JSON.stringify(obj, Object.keys(obj).sort())`, which reads as a canonicaliser and is not one:
+the array replacer filters keys at every depth, so the nested score serialised as `{}` and fell
+outside the signature. Two checkpoints with entirely different scores produced byte-identical
+signing bodies. The scheme found it by asserting that tampering **fails**, rather than that the
+honest document passes. The signing form is now declared in the document as `canon_alg` and
+check 3 fails loudly if it ever regresses.
+
+Check 8 is load bearing. Everything above it proves the arithmetic; check 8 proves the arithmetic
+was committed to before its inputs existed, and that moving it takes two beacon operators at once.
 
 ### Is the verifier itself any good?
 
-A verifier that has only ever been run against an honest document has not been
-tested. `pt/negative-test.mjs` serves eleven deliberately corrupted checkpoints
-over localhost, points a copy of `verify.mjs` at each one, and requires a
-refusal every time.
+A verifier only ever run against an honest document has not been tested. `pt/negative-test.mjs`
+serves fifteen deliberately corrupted checkpoints over localhost, points a copy of `verify.mjs`
+at each one, and requires a refusal every time.
 
 ```bash
 node pt/negative-test.mjs
 ```
 
-```
-  ok      the honest document fails only the localhost endpoint check
-  REFUSED score edited after signing          (signature)
-  REFUSED tree head edited                    (signature)
-  REFUSED beacon signature swapped            (signature)
-  REFUSED canon_alg removed                   (declared canonical form)
-  REFUSED signature replaced                  (signature)
-  REFUSED violation counts edited             (signature)
-  REFUSED a case removed from the corpus      (case list root)
-  REFUSED a control reclassified              (selection replay)
-  REFUSED registration back-dated             (log replay)
-  REFUSED the decision rule rewritten         (log replay)
-```
-
-The honest baseline is required to fail exactly one check and no others: served
-from localhost, the on-chain record says `raw.githubusercontent.com` and the
-verifier is right to notice. Requiring that specific single failure is a
+The honest baseline is required to fail exactly one check and no others - the endpoint check,
+which localhost cannot satisfy by construction. Requiring that specific single failure is a
 stronger baseline than requiring a pass.
 
-Check 7 is the load-bearing one. Everything above it proves the arithmetic;
-check 7 proves the arithmetic was committed to before its input existed.
+### What the scheme found
 
-### What the run found
+**An interface defect.** Specific orbital energy is an inertial invariant. AUX_POEORB publishes
+EARTH_FIXED state vectors, and the register applied the invariant to them directly: measured
+energy spread 23,681 J/kg against a 5,000 J/kg budget, falling to 8,494 J/kg once the rotation
+term was restored. Uncorrected that flagged 35 of 45 clean orbits. The frame is now declared at
+the type boundary and converted before any energy conclusion is drawn. Where a caller declares no
+frame and the track fails the budget as supplied but passes it once treated as rotating, the
+register reports that it cannot separate the two hypotheses and raises nothing - an inability is
+not a finding.
 
-Two defects, which is the point of running it.
+**A signing defect**, described above, in the scheme's own evidence path.
 
-**An interface defect.** Specific orbital energy is an inertial invariant.
-AUX_POEORB publishes EARTH_FIXED state vectors, and the register applied the
-invariant to them directly. Measured energy spread 23,681 J/kg against a
-5,000 J/kg budget, falling to 8,494 J/kg once the rotation term was restored.
-Uncorrected that flagged 35 of 45 clean orbits - specificity 0.2222. The frame
-is now declared at the type boundary and converted before any energy conclusion
-is drawn, with a regression test that fails if the conversion is removed.
+**A detection floor**, now measured rather than asserted: 119 of 120, bounded at 95.4 percent.
 
-**A detection floor.** The first run missed one seeded fault in 15. A later run
-with a different control set missed none. One run is not a detection floor;
-characterising it takes repetition, and the runs are published as they happen
-rather than after the good one.
-
-### Reading the on-chain record
+### Reading the on-chain record by hand
 
 ```bash
 npx --yes genlayer@0.39.2 call <contract> get_latest \
   --rpc https://rpc-asimov.genlayer.com
 ```
 
-The version pin matters. GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a
-contract built against genvm v0.2.16: it answers a view call with a bare `genvm
-execution error` and no message, which reads as a failed claim when it is a
-failed toolchain. `verify.mjs` pins it for this reason and says so when it
-cannot read the chain, rather than passing quietly.
+The version pin matters. GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a contract built
+against genvm v0.2.16: it answers a view call with a bare `genvm execution error` and no message,
+which reads as a failed claim when it is a failed toolchain. `verify.mjs` does not use the CLI at
+all - it posts one `gen_call` to the public RPC - and names the pin when a manual check is wanted.
+
+### What the scheme does not establish
+
+Cases are seeded openly: Certisyn mints them and knows which are controls. **Blindness requires a
+third party to inject cases through normal intake.** One register, over one reference record, on
+one day. Until an external seeder exists this is a measurement under a published method that
+anyone can replay, and it is described in exactly those words wherever it is cited.
 
 ## Licence
 

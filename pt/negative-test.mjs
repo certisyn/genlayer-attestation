@@ -24,19 +24,24 @@ for (const f of ['checkpoint.json', 'corpus.json']) {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const checkpointCases = [
-  ['score edited after signing', (c) => { c.checkpoint.score.fn = 0; c.checkpoint.score.sensitivity = 1; c.checkpoint.score.tp = 99; }],
+  ['pooled score edited after signing', (c) => { c.checkpoint.pooled.missed = 0; c.checkpoint.pooled.sensitivity = 1; }],
+  ['a single replicate edited', (c) => { c.checkpoint.per_replicate[0].fn = 0; c.checkpoint.per_replicate[0].tp += 1; }],
   ['tree head edited', (c) => { c.checkpoint.root_sha256 = 'a'.repeat(64); }],
-  ['beacon signature swapped', (c) => { c.checkpoint.beacon_signature = 'b'.repeat(96); }],
   ['canon_alg removed', (c) => { delete c.checkpoint.canon_alg; }],
   ['signature replaced', (c) => { c.signature = Buffer.alloc(64, 7).toString('base64'); }],
   ['violation counts edited', (c) => { c.checkpoint.violations = { energy_discontinuity: 1 }; }],
+  ['Wilson interval widened to hide the floor', (c) => { c.checkpoint.pooled.sensitivity_ci95 = [0.99, 1]; }],
 ];
 
 const corpusCases = [
   ['a case removed from the corpus', (c) => { c.cases.pop(); }],
-  ['a control reclassified', (c) => { c.selection.controls[0] = c.cases[0].case_id; }],
-  ['registration back-dated to after the beacon', (c) => { c.registration.registered_at = new Date(Date.now() + 86_400e3).toISOString(); }],
-  ['the decision rule rewritten after the run', (c) => { c.registration.decision_rule.fault_offset_m = 1; }],
+  ['a control reclassified', (c) => { c.replicate_records[0].controls[0] = c.cases[0].case_id; }],
+  ['a replicate back-dated to after its beacons', (c) => { c.replicate_records[0].registered_at = new Date(Date.now() + 86_400e3).toISOString(); }],
+  ['the decision rule rewritten after the run', (c) => { c.decision_rule.fault_offset_m = 1; }],
+  ['a drand round swapped for another', (c) => { c.replicate_records[0].beacons.drand.committed_round += 1000; }],
+  ['a NIST pulse output edited', (c) => { c.replicate_records[0].beacons.nist.output_value = 'f'.repeat(128); }],
+  ['a selection seed edited to justify the controls', (c) => { c.replicate_records[0].seed = '0'.repeat(64); }],
+  ['a replicate dropped from the corpus', (c) => { c.replicate_records.pop(); }],
 ];
 
 const dir = mkdtempSync(join(tmpdir(), 'ptneg-'));

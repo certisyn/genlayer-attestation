@@ -1,28 +1,119 @@
 {
   "checkpoint": {
     "origin": "certisyn.com/pt/orbital",
-    "tree_size": 62,
-    "root_sha256": "219eae5b81fb2fa036b592f3826df907ca0025439bf548281da4f064d7fc5840",
-    "timestamp": "2026-09-16T21:01:44.848Z",
-    "beacon_round": 32263046,
-    "beacon_signature": "b8b5464f936ea8665fa63d5f6becd87efe3afa9a9bd0789389503ec4d37af58f1dfe4e38d6bcacf79f51a89aebedfa10",
+    "scheme_version": 2,
+    "tree_size": 70,
+    "root_sha256": "13c8ebb8fa13f36280ee1f0ce66e3636b1310244277734615b61d046a262d630",
+    "timestamp": "2026-09-16T22:06:33.302Z",
     "case_list_root": "929baa592c4419b5e2a152e218605a181b45d136f23ef438dac0cfc59b9fdbde",
-    "score": {
-      "n": 60,
-      "tp": 15,
-      "fn": 0,
-      "tn": 45,
-      "fp": 0,
-      "sensitivity": 1,
+    "pooled": {
+      "replicates": 8,
+      "case_judgements": 480,
+      "seeded": 120,
+      "detected": 119,
+      "missed": 1,
+      "clean": 360,
+      "false_flags": 0,
+      "sensitivity": 0.9916666666666667,
+      "sensitivity_ci95": [
+        0.9543037087549504,
+        0.9985274442666578
+      ],
       "specificity": 1,
-      "accuracy": 1,
-      "cohen_kappa": 1
+      "specificity_ci95": [
+        0.9894419431113063,
+        0.9999999999999998
+      ],
+      "accuracy": 0.9979166666666667,
+      "cohen_kappa": 0.9944289693593314
     },
+    "per_replicate": [
+      {
+        "i": 1,
+        "drand_round": 32264077,
+        "nist_pulse": 1944468,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 2,
+        "drand_round": 32264112,
+        "nist_pulse": 1944469,
+        "n": 60,
+        "tp": 14,
+        "fn": 1,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 3,
+        "drand_round": 32264133,
+        "nist_pulse": 1944471,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 4,
+        "drand_round": 32264174,
+        "nist_pulse": 1944473,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 5,
+        "drand_round": 32264212,
+        "nist_pulse": 1944474,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 6,
+        "drand_round": 32264234,
+        "nist_pulse": 1944476,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 7,
+        "drand_round": 32264273,
+        "nist_pulse": 1944478,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      },
+      {
+        "i": 8,
+        "drand_round": 32264313,
+        "nist_pulse": 1944480,
+        "n": 60,
+        "tp": 15,
+        "fn": 0,
+        "tn": 45,
+        "fp": 0
+      }
+    ],
     "violations": {
-      "energy_discontinuity": 15
+      "energy_discontinuity": 119
     },
     "canon_alg": "sorted-keys-utf8-no-ws"
   },
-  "signature": "ndY39JFE2Df2IIxlQ1mY51juq2UCufcoXpnDJU/7E7NXgQ30pOUAtfc4sSeqAc9Lx4EQIKIMKSNQVGosvMnnAw==",
+  "signature": "BZTRqHf/MeK+yIxuKQm/3MpP5oZOyYYDSefxiFQ1sf0AvKIF+Si6+tiipGYTDWALHCEGufw8udCQ6O8zko6BDg==",
   "public_key_spki_b64": "MCowBQYDK2VwAyEAJCA5iW9yKpGXUYE+qBk/nxIYtDLo8Cw6rohbkHRtWr8="
 }

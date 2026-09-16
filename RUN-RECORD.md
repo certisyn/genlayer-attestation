@@ -111,18 +111,37 @@ question, and `pt/` answers it with a proficiency test in the ISO/IEC 17043
 sense, run against the production orbital register.
 
 ```
-16 Sep 2026   run 001   n=60   sensitivity 0.9333   specificity 0.2222
-                        register applied an inertial invariant to an
-                        EARTH_FIXED reference record
-16 Sep 2026   run 003   n=60   sensitivity 1.0000   specificity 1.0000
-                        frame declared at the type boundary and converted
-                        before any energy conclusion is drawn
+16 Sep 2026   run 001     n=60    sensitivity 0.9333   specificity 0.2222
+                          register applied an inertial invariant to an
+                          EARTH_FIXED reference record
+16 Sep 2026   run 003     n=60    sensitivity 1.0000   specificity 1.0000
+                          frame declared at the type boundary and converted
+                          before any energy conclusion is drawn
+16 Sep 2026   series v2   n=480   sensitivity 0.9917 [0.9543, 0.9985]
+              8 replicates        specificity 1.0000 [0.9894, 1.0000]
+                          dual beacon, drand quicknet and NIST Beacon 2.0,
+                          both committed unpublished at each registration
 ```
 
-Run 002 is not published. It ran with the frame fix in place but was signed in
-the defective canonical form described below, and a checkpoint whose signature
-does not cover its own score is not evidence. It is named here rather than
-quietly dropped.
+Run 002 is recorded and withheld from publication. It carried the frame fix and
+was signed in the canonical form superseded below; a checkpoint whose signature
+does not cover its own score does not meet the publication bar. Every run is
+recorded; the ones that clear the bar are published.
+
+**The second beacon.** A single beacon operator is a single point of trust, so
+the series consumes two that fail differently: drand quicknet, a threshold BLS
+network with many operators and a 3 s period that answers `425 Too Early` on an
+unpublished round; and NIST Randomness Beacon 2.0, one US federal instrument on
+its own hardware with a 60 s period that answers `404` on an unpublished pulse.
+The seed is `sha256(drand_randomness || nist_output || case_list_root)`, and the
+case list is committed before either beacon is named. Steering the selection
+takes both operators at the same time.
+
+**The detection floor, measured.** 480 case judgements across 8 replicates, 120
+seeded, 119 detected, 1 missed, 0 false flags in 360 clean orbits. The interval
+is Wilson rather than the normal approximation: at a proportion of 1.0 the
+normal approximation returns [1, 1], which would state a 100 percent detection
+floor from a finite sample. The published claim is a floor of 95.4 percent.
 
 **The signing defect, and why the verifier exists.** Run 001's checkpoint was
 signed over `JSON.stringify(checkpoint, Object.keys(checkpoint).sort())`. That

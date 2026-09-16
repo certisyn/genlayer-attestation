@@ -1,26 +1,27 @@
 // =============================================================================
-// scripts/pt/pt-verify.mjs - check a published Certisyn proficiency checkpoint.
+// scripts/pt/pt-verify.mjs - check a published Certisyn proficiency series.
 // =============================================================================
-// Written to be run by someone who does not trust Certisyn. It imports nothing
-// from this repository, takes no arguments, and fetches everything it needs
-// from public sources: GitHub raw, the drand League of Entropy API, and a
-// GenLayer Asimov node.
+// Built for someone who has no reason to take Certisyn's word for anything. It
+// imports nothing from this repository, takes no arguments, installs nothing,
+// and fetches every value it checks from the source that issued it.
 //
-// What it establishes, in order:
+// What it establishes:
 //
-//   1  the checkpoint signature verifies under the published key
-//   2  that signature actually BINDS the score - not a formality: the first
-//      published checkpoint was signed in a form that excluded it
-//   3  the beacon round is real and the randomness derives from its signature
-//   4  the case list hashes to the committed root
-//   5  the control selection replays exactly from that root and that beacon
-//   6  the entire log replays, leaf by leaf, to the published tree head
-//   7  the committed round had not published when the rule was registered
-//   8  a committee Certisyn does not operate attested this exact document
+//    1  the checkpoint declares the canonical form it was signed in
+//    2  the signature verifies under the published key
+//    3  that signature binds the score - editing any published number breaks it
+//    4  every drand round is real and its randomness derives from its signature
+//    5  every NIST pulse is real and lands where the commitment said it would
+//    6  every selection seed is the digest of both beacon outputs and the case list
+//    7  every control selection replays exactly
+//    8  both beacon commitments postdate the replicate's registration
+//    9  the case list hashes to the committed root
+//   10  the whole log replays, leaf by leaf, to the published tree head
+//   11  the pooled figures recompute from the per-replicate figures
+//   12  the Wilson interval recomputes from the pooled counts
+//   13  a committee Certisyn does not operate attested this exact document
 //
-// No dependencies and no install: node, three public HTTPS endpoints, done in
-// seconds. The canonical digest is printed either way so it can also be
-// compared by hand against the chain.
+// Node and three public HTTPS endpoints. Seconds, not minutes.
 //
 // Run:  node scripts/pt/pt-verify.mjs
 // =============================================================================
@@ -31,26 +32,21 @@ const BASE = 'https://raw.githubusercontent.com/certisyn/genlayer-attestation/ma
 const DRAND_CHAIN = '52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971';
 const DRAND_GENESIS = 1692803367;
 const DRAND_PERIOD = 3;
+const NIST_PERIOD_S = 60;
 const RPC = 'https://rpc-asimov.genlayer.com';
 const CONTRACT = '0xc17444190051819529815C4e0C15a0557068a7f2';
 
 // The GenLayer calldata for the zero-argument view method get_latest.
 //
-// Hard-coded rather than encoded, on purpose. Reaching the chain through the
-// genlayer CLI means an npx install of a package that pulls eslint and a native
-// addon - minutes on a cold cache, and a verifier nobody waits for is a
-// verifier nobody runs. This is one POST to a public RPC endpoint with no
-// dependencies at all.
+// Hard-coded rather than encoded. Reaching the chain through the genlayer CLI
+// means an npx install that pulls eslint and a native addon - minutes on a cold
+// cache, and a verifier nobody waits for is a verifier nobody runs. This is one
+// POST to a public RPC endpoint with no dependencies at all.
 //
 // Captured from genlayer CLI 0.39.2 on the wire and cross-checked against three
-// other zero-arg methods on the same contract. The structure is a map
-// {"method": "get_latest"} in GenVM calldata encoding. If the encoding ever
-// changes, the node answers with an error rather than a wrong record, so this
-// fails loudly.
-//
-// Regenerate with:
-//   node --import ./sniff.mjs <cli> call <address> get_latest
-// where sniff.mjs wraps global fetch and prints the gen_call params.
+// other zero-argument methods on the same contract. The structure is the map
+// {"method": "get_latest"} in GenVM calldata encoding. A changed encoding makes
+// the node answer with an error rather than a wrong record, so this fails loudly.
 const CALLDATA_GET_LATEST = '0xd5930e066d6574686f64546765745f6c617465737400';
 
 // Worth naming: GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a contract
@@ -89,6 +85,16 @@ function mth(leaves) {
   return sha256(Buffer.concat([Buffer.from([1]), mth(leaves.slice(0, k)), mth(leaves.slice(k))]));
 }
 
+function wilson95(successes, trials) {
+  if (trials === 0) return [0, 1];
+  const z = 1.959963984540054;
+  const p = successes / trials;
+  const d = 1 + (z * z) / trials;
+  const centre = p + (z * z) / (2 * trials);
+  const half = z * Math.sqrt((p * (1 - p)) / trials + (z * z) / (4 * trials * trials));
+  return [Math.max(0, (centre - half) / d), Math.min(1, (centre + half) / d)];
+}
+
 // ------------------------------------------------------------------ reporting
 
 let failed = 0;
@@ -99,6 +105,7 @@ const check = (ok, label, detail = '') => {
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '   ' + detail : ''}`);
 };
 const note = (label, detail) => console.log(`  ----  ${label}   ${detail}`);
+const close = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol;
 
 async function getJson(url) {
   const r = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -107,21 +114,26 @@ async function getJson(url) {
 }
 
 async function main() {
-  console.log('Checking a published Certisyn proficiency checkpoint.');
-  console.log('Nothing below is taken on Certisyn\'s word.\n');
+  console.log('Checking a published Certisyn proficiency series.');
+  console.log('Every value below is fetched from the source that issued it.\n');
 
   const signed = await getJson(`${BASE}/checkpoint.json`);
   const corpus = await getJson(`${BASE}/corpus.json`);
   const cp = signed.checkpoint;
-  const s = cp.score;
+  const p = cp.pooled;
+  const reps = corpus.replicate_records;
 
-  console.log(`origin       ${cp.origin}`);
+  console.log(`origin       ${cp.origin}   scheme v${cp.scheme_version}`);
   console.log(`timestamp    ${cp.timestamp}`);
-  console.log(`published    n=${s.n} tp=${s.tp} fn=${s.fn} tn=${s.tn} fp=${s.fp}`);
-  console.log(`             sensitivity ${s.sensitivity} specificity ${s.specificity}`);
-  console.log(`             kappa ${s.cohen_kappa}\n`);
+  console.log(`published    ${p.replicates} replicates, ${p.case_judgements} case judgements`);
+  console.log(`             detected ${p.detected} of ${p.seeded} seeded, missed ${p.missed}`);
+  console.log(`             false flags ${p.false_flags} of ${p.clean} clean`);
+  console.log(`             sensitivity ${p.sensitivity?.toFixed(4)} `
+    + `95% CI [${p.sensitivity_ci95[0].toFixed(4)}, ${p.sensitivity_ci95[1].toFixed(4)}]`);
+  console.log(`             specificity ${p.specificity?.toFixed(4)} `
+    + `95% CI [${p.specificity_ci95[0].toFixed(4)}, ${p.specificity_ci95[1].toFixed(4)}]\n`);
 
-  // ---- 1. the signature -----------------------------------------------------
+  // ---- 1 to 3. the signature, and what it covers ---------------------------
   const pub = createPublicKey({
     key: Buffer.from(signed.public_key_spki_b64, 'base64'),
     format: 'der',
@@ -134,78 +146,121 @@ async function main() {
     'the checkpoint declares the canonical form it was signed in', `canon_alg=${cp.canon_alg}`);
   check(verifies(cp), 'the signature verifies under the published key');
 
-  // ---- 2. the signature covers the score ------------------------------------
   // A signature is worth exactly what it covers. JSON.stringify(obj, keyArray)
   // filters keys at every depth, so a checkpoint signed that way binds its
   // top-level scalars and serialises its score as {}. Under that form the
-  // published sensitivity can be edited and the signature still verifies. This
-  // check is what makes that class of defect impossible to ship again.
-  const tamperScore = { ...cp, score: { ...s, sensitivity: 0.123456, fn: (s.fn ?? 0) + 7 } };
-  const tamperRoot = { ...cp, root_sha256: '0'.repeat(64) };
-  check(!verifies(tamperScore), 'editing the score breaks the signature');
-  check(!verifies(tamperRoot), 'editing the tree head breaks the signature');
+  // published sensitivity can be edited and the signature still verifies. These
+  // three checks make that class of defect impossible to ship again.
+  check(!verifies({ ...cp, pooled: { ...p, missed: 0, sensitivity: 1 } }),
+    'editing the pooled score breaks the signature');
+  check(!verifies({ ...cp, root_sha256: '0'.repeat(64) }),
+    'editing the tree head breaks the signature');
+  check(!verifies({ ...cp, per_replicate: cp.per_replicate.map((r) => ({ ...r, fn: 0 })) }),
+    'editing a single replicate breaks the signature');
 
-  // ---- 3. the beacon --------------------------------------------------------
-  const beacon = await getJson(`https://api.drand.sh/v2/chains/${DRAND_CHAIN}/rounds/${cp.beacon_round}`);
-  check(beacon.round === cp.beacon_round, `drand round ${cp.beacon_round} exists and is that round`);
-  check(beacon.signature === cp.beacon_signature,
-    'the checkpoint quotes the signature the beacon actually published');
-  const randomness = sha256(Buffer.from(beacon.signature, 'hex')).toString('hex');
-  check(randomness === corpus.beacon.randomness,
-    'the randomness is the digest of that beacon signature');
-
-  // ---- 4 and 5. the selection ----------------------------------------------
-  const ids = corpus.cases.map((c) => c.case_id).sort();
-  const listRoot = mth(ids.map((c) => sha256(Buffer.from(c))));
+  // ---- 4 to 8. the beacons and the selection -------------------------------
+  const listRoot = mth([...corpus.cases.map((c) => c.case_id)].sort()
+    .map((c) => sha256(Buffer.from(c))));
   check(listRoot.toString('hex') === cp.case_list_root,
-    'the case list hashes to the committed root', `${ids.length} cases`);
+    'the case list hashes to the committed root', `${corpus.cases.length} cases`);
 
-  const seed = sha256(Buffer.concat([Buffer.from(randomness, 'hex'), listRoot]));
-  const scored = ids.map((id) => ({
-    id,
-    v: sha256(Buffer.concat([seed, Buffer.from(id)])).readBigUInt64BE(0),
-  }));
-  scored.sort((a, b) => (a.v < b.v ? -1 : a.v > b.v ? 1 : 0));
-  const k = Math.max(1, Math.round(ids.length * corpus.decision_rule.control_fraction));
-  const replayed = scored.slice(0, k).map((x) => x.id).sort();
-  const published = [...corpus.selection.controls].sort();
-  check(JSON.stringify(replayed) === JSON.stringify(published),
-    'the control selection replays exactly', `${replayed.length} of ${ids.length}`);
+  const ids = corpus.cases.map((c) => c.case_id).sort();
+  const fraction = corpus.decision_rule.control_fraction;
+  const k = Math.max(1, Math.round(ids.length * fraction));
 
-  // ---- 6. the whole log replays --------------------------------------------
-  // Not just the tree head: every leaf is rebuilt from published data. If one
-  // case were added, dropped, reordered or reclassified after the fact, the
-  // head would not land here.
-  const controls = new Set(published);
-  const leaves = [Buffer.from(canon(corpus.registration))];
-  for (const c of corpus.cases) {
-    leaves.push(Buffer.from(canon({
-      case_id: c.case_id,
-      first_t: c.first_t,
-      states: c.states,
-      seeded: controls.has(c.case_id),
-    })));
+  let drandOk = 0; let nistOk = 0; let seedOk = 0; let selOk = 0; let futureOk = 0;
+  const complaints = [];
+  for (const r of reps) {
+    const tag = `replicate ${r.i}`;
+
+    const d = await getJson(`https://api.drand.sh/v2/chains/${DRAND_CHAIN}/rounds/${r.beacons.drand.committed_round}`);
+    const randomness = sha256(Buffer.from(d.signature, 'hex')).toString('hex');
+    if (d.round === r.beacons.drand.committed_round
+      && d.signature === r.beacons.drand.signature
+      && randomness === r.beacons.drand.randomness) drandOk++;
+    else complaints.push(`${tag}: drand mismatch`);
+
+    const nUrl = `https://beacon.nist.gov/beacon/2.0/chain/${r.beacons.nist.chain_index}/pulse/${r.beacons.nist.committed_pulse}`;
+    const nj = await getJson(nUrl);
+    const nOut = String(nj.pulse.outputValue).toLowerCase();
+    const nTs = String(nj.pulse.timeStamp);
+    const nMs = Date.parse(nTs.endsWith('Z') ? nTs : nTs + 'Z');
+    if (Number(nj.pulse.pulseIndex) === r.beacons.nist.committed_pulse
+      && nOut === r.beacons.nist.output_value
+      && Math.abs(nMs - Date.parse(r.beacons.nist.expected_time)) <= NIST_PERIOD_S * 1000) nistOk++;
+    else complaints.push(`${tag}: nist mismatch`);
+
+    const seed = sha256(Buffer.concat([
+      Buffer.from(r.beacons.drand.randomness, 'hex'),
+      Buffer.from(r.beacons.nist.output_value, 'hex'),
+      listRoot,
+    ]));
+    if (seed.toString('hex') === r.seed) seedOk++;
+    else complaints.push(`${tag}: seed mismatch`);
+
+    const scored = ids.map((id) => ({ id, v: sha256(Buffer.concat([seed, Buffer.from(id)])).readBigUInt64BE(0) }));
+    scored.sort((a, b) => (a.v < b.v ? -1 : a.v > b.v ? 1 : 0));
+    const replayed = scored.slice(0, k).map((x) => x.id).sort();
+    if (JSON.stringify(replayed) === JSON.stringify([...r.controls].sort())) selOk++;
+    else complaints.push(`${tag}: selection does not replay`);
+
+    // The load-bearing one. Everything else proves the arithmetic; this proves
+    // the arithmetic was committed to before its inputs existed - and it takes
+    // BOTH beacon operators at once to move it.
+    const regAt = Date.parse(r.registered_at);
+    const drandTimeMs = (DRAND_GENESIS + (r.beacons.drand.committed_round - 1) * DRAND_PERIOD) * 1000;
+    if (drandTimeMs > regAt && nMs > regAt) futureOk++;
+    else complaints.push(`${tag}: a committed beacon value already existed at registration`);
   }
-  leaves.push(Buffer.from(canon({
-    score: s, round: cp.beacon_round, case_list_root: cp.case_list_root, violations: cp.violations,
-  })));
-  const root = mth(leaves).toString('hex');
+  const N = reps.length;
+  check(N === cp.pooled.replicates && N === cp.per_replicate.length,
+    'the corpus carries every replicate the checkpoint claims', `${N} replicates`);
+  check(drandOk === N, 'every drand round is real and its randomness derives from its signature', `${drandOk}/${N}`);
+  check(nistOk === N, 'every NIST pulse is real and lands where the commitment said', `${nistOk}/${N}`);
+  check(seedOk === N, 'every selection seed is the digest of both beacons and the case list', `${seedOk}/${N}`);
+  check(selOk === N, 'every control selection replays exactly', `${selOk}/${N}, ${k} of ${ids.length} each`);
+  check(futureOk === N, 'both beacon commitments postdate the replicate registration', `${futureOk}/${N}`);
+  for (const c of complaints.slice(0, 8)) note('detail', c);
+
+  // ---- 9 and 10. the whole log replays -------------------------------------
+  // Not just the tree head: every leaf is rebuilt from published data. A case
+  // added, dropped, reordered or reclassified after the fact does not land here.
+  const header = {
+    origin: corpus.origin,
+    scheme_version: corpus.scheme_version,
+    reference: corpus.reference,
+    decision_rule: corpus.decision_rule,
+    case_list_root: corpus.case_list_root,
+    replicates: corpus.replicates,
+  };
+  const leaves = [Buffer.from(canon(header))];
+  for (const c of corpus.cases) leaves.push(Buffer.from(canon(c)));
+  for (const r of reps) leaves.push(Buffer.from(canon(r)));
+  leaves.push(Buffer.from(canon({ pooled: p, violations: cp.violations })));
   check(leaves.length === cp.tree_size, 'the published tree size matches the published corpus',
     `${leaves.length} leaves`);
-  check(root === cp.root_sha256, 'the whole log replays to the published tree head');
+  check(mth(leaves).toString('hex') === cp.root_sha256,
+    'the whole log replays to the published tree head');
 
-  // ---- 7. the selection could not have been chosen -------------------------
-  // This is the load-bearing one. Everything above proves the arithmetic; this
-  // proves the arithmetic was committed to before its input existed.
-  const registeredAt = Date.parse(corpus.registration.registered_at) / 1000;
-  const roundTime = DRAND_GENESIS + (cp.beacon_round - 1) * DRAND_PERIOD;
-  check(roundTime > registeredAt,
-    'the committed round had not published when the rule was registered',
-    `${Math.round(roundTime - registeredAt)} s ahead`);
-  check(corpus.registration.beacon.committed_round === cp.beacon_round,
-    'the round scored is the round registered');
+  // ---- 11 and 12. the pooled arithmetic ------------------------------------
+  const sum = (f) => cp.per_replicate.reduce((a, r) => a + r[f], 0);
+  const tp = sum('tp'); const fn = sum('fn'); const tn = sum('tn'); const fp = sum('fp');
+  check(tp === p.detected && fn === p.missed && tn + fp === p.clean && tp + fn === p.seeded
+    && tp + fn + tn + fp === p.case_judgements,
+    'the pooled counts are the sum of the per-replicate counts',
+    `tp=${tp} fn=${fn} tn=${tn} fp=${fp}`);
+  check(close(p.sensitivity, tp / (tp + fn)) && close(p.specificity, tn / (tn + fp)),
+    'the pooled rates recompute from those counts');
+  const sCi = wilson95(tp, tp + fn);
+  const pCi = wilson95(tn, tn + fp);
+  check(close(sCi[0], p.sensitivity_ci95[0], 1e-9) && close(sCi[1], p.sensitivity_ci95[1], 1e-9)
+    && close(pCi[0], p.specificity_ci95[0], 1e-9) && close(pCi[1], p.specificity_ci95[1], 1e-9),
+    'the Wilson 95 percent intervals recompute from those counts');
+  check(p.sensitivity_ci95[0] < 1 || p.missed > 0,
+    'the interval keeps a lower bound below 1, as a bounded sample requires',
+    `lower ${p.sensitivity_ci95[0].toFixed(4)}`);
 
-  // ---- 8. the witness -------------------------------------------------------
+  // ---- 13. the witness ------------------------------------------------------
   const digest = sha256(Buffer.from(canon(signed), 'utf8')).toString('hex');
   console.log('');
   note('canonical digest of this document', digest);
@@ -252,8 +307,7 @@ async function main() {
     failed++; checked++;
     console.log('  FAIL  the on-chain witness could not be read');
   } else {
-    check(rec.outcome === 'attested', 'the committee recorded an attestation',
-      `outcome=${rec.outcome}`);
+    check(rec.outcome === 'attested', 'the committee recorded an attestation', `outcome=${rec.outcome}`);
     check(rec.expected_digest === digest && rec.canonical_digest === digest,
       'the committee attested THIS document', `${String(rec.canonical_digest).slice(0, 16)}...`);
     check(rec.endpoint === `${BASE}/checkpoint.json`,
