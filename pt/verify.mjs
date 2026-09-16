@@ -18,14 +18,13 @@
 //   7  the committed round had not published when the rule was registered
 //   8  a committee Certisyn does not operate attested this exact document
 //
-// Checks 1 to 7 need nothing but node. Check 8 needs a GenLayer CLI and is
-// reported with its own status; the canonical digest is printed either way so
-// it can be compared by hand.
+// No dependencies and no install: node, three public HTTPS endpoints, done in
+// seconds. The canonical digest is printed either way so it can also be
+// compared by hand against the chain.
 //
 // Run:  node scripts/pt/pt-verify.mjs
 // =============================================================================
 
-import { execFileSync } from 'node:child_process';
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
 
 const BASE = 'https://raw.githubusercontent.com/certisyn/genlayer-attestation/main/pt';
@@ -35,10 +34,29 @@ const DRAND_PERIOD = 3;
 const RPC = 'https://rpc-asimov.genlayer.com';
 const CONTRACT = '0xc17444190051819529815C4e0C15a0557068a7f2';
 
-// The GenLayer CLI line that can resolve methods on a v0.2.16 contract. The
-// 0.40 release candidates cannot: they answer a view call with a genvm
+// The GenLayer calldata for the zero-argument view method get_latest.
+//
+// Hard-coded rather than encoded, on purpose. Reaching the chain through the
+// genlayer CLI means an npx install of a package that pulls eslint and a native
+// addon - minutes on a cold cache, and a verifier nobody waits for is a
+// verifier nobody runs. This is one POST to a public RPC endpoint with no
+// dependencies at all.
+//
+// Captured from genlayer CLI 0.39.2 on the wire and cross-checked against three
+// other zero-arg methods on the same contract. The structure is a map
+// {"method": "get_latest"} in GenVM calldata encoding. If the encoding ever
+// changes, the node answers with an error rather than a wrong record, so this
+// fails loudly.
+//
+// Regenerate with:
+//   node --import ./sniff.mjs <cli> call <address> get_latest
+// where sniff.mjs wraps global fetch and prints the gen_call params.
+const CALLDATA_GET_LATEST = '0xd5930e066d6574686f64546765745f6c617465737400';
+
+// Worth naming: GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a contract
+// built against genvm v0.2.16. It answers a view call with a bare genvm
 // execution error and no message, which reads as a failed claim when it is a
-// failed toolchain. Named here so nobody draws that conclusion.
+// failed toolchain. Talking to the RPC directly sidesteps that entirely.
 const CLI_PIN = 'genlayer@0.39.2';
 
 // ------------------------------------------------------------- canonical form
@@ -192,25 +210,48 @@ async function main() {
   console.log('');
   note('canonical digest of this document', digest);
 
-  let cliOut = '';
+  let rec = null;
+  let why = '';
   try {
-    cliOut = execFileSync(
-      process.platform === 'win32' ? 'npx.cmd' : 'npx',
-      ['--yes', CLI_PIN, 'call', CONTRACT, 'get_latest', '--rpc', RPC],
-      { encoding: 'utf8', timeout: 180_000, stdio: ['ignore', 'pipe', 'pipe'] },
-    );
+    const r = await fetch(RPC, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'gen_call',
+        params: [{
+          type: 'read',
+          to: CONTRACT,
+          from: '0x0000000000000000000000000000000000000000',
+          data: CALLDATA_GET_LATEST,
+          transaction_hash_variant: 'latest-nonfinal',
+        }],
+      }),
+    });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message ?? JSON.stringify(j.error));
+    const hex = typeof j.result === 'string' ? j.result : j.result?.data;
+    if (!hex) throw new Error('no data in gen_call result');
+    // The return value is a GenVM-encoded string whose payload is the JSON the
+    // view method returns. Take the payload and refuse anything that is not a
+    // single well-formed object.
+    const text = Buffer.from(hex.replace(/^0x/, ''), 'hex').toString('utf8');
+    const a = text.indexOf('{');
+    const b = text.lastIndexOf('}');
+    if (a < 0 || b <= a) throw new Error('no JSON object in the returned value');
+    rec = JSON.parse(text.slice(a, b + 1));
   } catch (e) {
-    cliOut = [e?.stdout, e?.stderr, e?.message].filter(Boolean).join('\n');
+    why = e?.message ?? String(e);
   }
-  const m = /Result:\s*(\{[\s\S]*?\})/.exec(cliOut);
-  if (!m) {
-    note('on-chain witness', `could not read ${CONTRACT} from here`);
-    note('', `run: npx --yes ${CLI_PIN} call ${CONTRACT} get_latest --rpc ${RPC}`);
+
+  if (!rec) {
+    note('on-chain witness', `could not read ${CONTRACT}: ${why}`);
+    note('', `by hand: npx --yes ${CLI_PIN} call ${CONTRACT} get_latest --rpc ${RPC}`);
     note('', 'expected_digest in that record must equal the digest above');
-    note('', 'a newer CLI answers this call with a genvm execution error; that is');
-    note('', 'the toolchain, not the claim. Use the pin.');
+    failed++; checked++;
+    console.log('  FAIL  the on-chain witness could not be read');
   } else {
-    const rec = JSON.parse(m[1]);
     check(rec.outcome === 'attested', 'the committee recorded an attestation',
       `outcome=${rec.outcome}`);
     check(rec.expected_digest === digest && rec.canonical_digest === digest,

@@ -240,6 +240,36 @@ writing the verifier, which is the argument for writing one. The signing form is
 now declared in the document as `canon_alg` and check 2 fails loudly if it ever
 regresses.
 
+### Is the verifier itself any good?
+
+A verifier that has only ever been run against an honest document has not been
+tested. `pt/negative-test.mjs` serves eleven deliberately corrupted checkpoints
+over localhost, points a copy of `verify.mjs` at each one, and requires a
+refusal every time.
+
+```bash
+node pt/negative-test.mjs
+```
+
+```
+  ok      the honest document fails only the localhost endpoint check
+  REFUSED score edited after signing          (signature)
+  REFUSED tree head edited                    (signature)
+  REFUSED beacon signature swapped            (signature)
+  REFUSED canon_alg removed                   (declared canonical form)
+  REFUSED signature replaced                  (signature)
+  REFUSED violation counts edited             (signature)
+  REFUSED a case removed from the corpus      (case list root)
+  REFUSED a control reclassified              (selection replay)
+  REFUSED registration back-dated             (log replay)
+  REFUSED the decision rule rewritten         (log replay)
+```
+
+The honest baseline is required to fail exactly one check and no others: served
+from localhost, the on-chain record says `raw.githubusercontent.com` and the
+verifier is right to notice. Requiring that specific single failure is a
+stronger baseline than requiring a pass.
+
 Check 7 is the load-bearing one. Everything above it proves the arithmetic;
 check 7 proves the arithmetic was committed to before its input existed.
 
