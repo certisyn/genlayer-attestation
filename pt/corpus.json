@@ -1,0 +1,371 @@
+{
+  "reference": "AUX_POEORB/S1A_OPER_AUX_POEORB_OPOD_20260711T070647_V20260620T225942_20260622T005942.EOF",
+  "decision_rule": {
+    "domain": "orbital",
+    "register": "S1.orbital_feasible via assessOrbitalFeasibility",
+    "engine": "apps/core/src/lib/orbital - the production module, not a stub",
+    "reference_record": "Sentinel-1 AUX_POEORB precise orbit, Copernicus, sub-metre, published before the case was minted",
+    "case_form": "a window of consecutive ECEF state vectors presented as an orbital track",
+    "seeded_fault": "one state displaced by 120 km along x, which breaks specific-energy consistency",
+    "acceptance": "the register SHOULD report at least one violation for a seeded case and none for a clean one",
+    "scoring": "sensitivity and specificity against the seeded flag, Cohen kappa alongside",
+    "reference_frame": "the reference record is published EARTH_FIXED; specific energy is an inertial invariant, so the Earth-rotation term is added to recover an inertial velocity before the register is called. Declared here before the run, not after it.",
+    "regime": "leo",
+    "window_states": 12,
+    "cases": 60,
+    "control_fraction": 0.25,
+    "fault_offset_m": 120000
+  },
+  "registration": {
+    "registered_at": "2026-09-16T19:28:05.409Z",
+    "decision_rule": {
+      "domain": "orbital",
+      "register": "S1.orbital_feasible via assessOrbitalFeasibility",
+      "engine": "apps/core/src/lib/orbital - the production module, not a stub",
+      "reference_record": "Sentinel-1 AUX_POEORB precise orbit, Copernicus, sub-metre, published before the case was minted",
+      "case_form": "a window of consecutive ECEF state vectors presented as an orbital track",
+      "seeded_fault": "one state displaced by 120 km along x, which breaks specific-energy consistency",
+      "acceptance": "the register SHOULD report at least one violation for a seeded case and none for a clean one",
+      "scoring": "sensitivity and specificity against the seeded flag, Cohen kappa alongside",
+      "reference_frame": "the reference record is published EARTH_FIXED; specific energy is an inertial invariant, so the Earth-rotation term is added to recover an inertial velocity before the register is called. Declared here before the run, not after it.",
+      "regime": "leo",
+      "window_states": 12,
+      "cases": 60,
+      "control_fraction": 0.25,
+      "fault_offset_m": 120000
+    },
+    "beacon": {
+      "source": "drand quicknet",
+      "chain": "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+      "committed_round": 32261189
+    }
+  },
+  "beacon": {
+    "round": 32261189,
+    "signature": "97426f2626ae20793ae2392182a45105970fe406690953b0eb1f9078c6bd7a7ea5b7c3965253dd0434c3ed93ed7dbcc4",
+    "randomness": "afbd038e7453c2b77e2f3dd40ec7eebc2ef2215f84020ae0d41961b721937c71"
+  },
+  "selection": {
+    "controls": [
+      "CS-PT-O-0000",
+      "CS-PT-O-0001",
+      "CS-PT-O-0009",
+      "CS-PT-O-0011",
+      "CS-PT-O-0012",
+      "CS-PT-O-0021",
+      "CS-PT-O-0022",
+      "CS-PT-O-0031",
+      "CS-PT-O-0039",
+      "CS-PT-O-0043",
+      "CS-PT-O-0049",
+      "CS-PT-O-0051",
+      "CS-PT-O-0056",
+      "CS-PT-O-0058",
+      "CS-PT-O-0059"
+    ],
+    "caseListRoot": "929baa592c4419b5e2a152e218605a181b45d136f23ef438dac0cfc59b9fdbde",
+    "seed": "4724b36f5710412f1872c5df0a4c86de60bd7da38eb632b6424e9826c7c210b8"
+  },
+  "cases": [
+    {
+      "case_id": "CS-PT-O-0000",
+      "first_t": 0,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0001",
+      "first_t": 120,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0002",
+      "first_t": 240,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0003",
+      "first_t": 360,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0004",
+      "first_t": 480,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0005",
+      "first_t": 600,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0006",
+      "first_t": 720,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0007",
+      "first_t": 840,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0008",
+      "first_t": 960,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0009",
+      "first_t": 1080,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0010",
+      "first_t": 1200,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0011",
+      "first_t": 1320,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0012",
+      "first_t": 1440,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0013",
+      "first_t": 1560,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0014",
+      "first_t": 1680,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0015",
+      "first_t": 1800,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0016",
+      "first_t": 1920,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0017",
+      "first_t": 2040,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0018",
+      "first_t": 2160,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0019",
+      "first_t": 2280,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0020",
+      "first_t": 2400,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0021",
+      "first_t": 2520,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0022",
+      "first_t": 2640,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0023",
+      "first_t": 2760,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0024",
+      "first_t": 2880,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0025",
+      "first_t": 3000,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0026",
+      "first_t": 3120,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0027",
+      "first_t": 3240,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0028",
+      "first_t": 3360,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0029",
+      "first_t": 3480,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0030",
+      "first_t": 3600,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0031",
+      "first_t": 3720,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0032",
+      "first_t": 3840,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0033",
+      "first_t": 3960,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0034",
+      "first_t": 4080,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0035",
+      "first_t": 4200,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0036",
+      "first_t": 4320,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0037",
+      "first_t": 4440,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0038",
+      "first_t": 4560,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0039",
+      "first_t": 4680,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0040",
+      "first_t": 4800,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0041",
+      "first_t": 4920,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0042",
+      "first_t": 5040,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0043",
+      "first_t": 5160,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0044",
+      "first_t": 5280,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0045",
+      "first_t": 5400,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0046",
+      "first_t": 5520,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0047",
+      "first_t": 5640,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0048",
+      "first_t": 5760,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0049",
+      "first_t": 5880,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0050",
+      "first_t": 6000,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0051",
+      "first_t": 6120,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0052",
+      "first_t": 6240,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0053",
+      "first_t": 6360,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0054",
+      "first_t": 6480,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0055",
+      "first_t": 6600,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0056",
+      "first_t": 6720,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0057",
+      "first_t": 6840,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0058",
+      "first_t": 6960,
+      "states": 12
+    },
+    {
+      "case_id": "CS-PT-O-0059",
+      "first_t": 7080,
+      "states": 12
+    }
+  ]
+}
