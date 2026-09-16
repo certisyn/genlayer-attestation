@@ -2,23 +2,27 @@
   "checkpoint": {
     "origin": "certisyn.com/pt/orbital",
     "tree_size": 62,
-    "root_sha256": "63847a7778869d447333b5aaac9044615361c16728ce2d9de82f5b70a8d00d86",
-    "timestamp": "2026-09-16T19:28:59.384Z",
-    "beacon_round": 32261189,
-    "beacon_signature": "97426f2626ae20793ae2392182a45105970fe406690953b0eb1f9078c6bd7a7ea5b7c3965253dd0434c3ed93ed7dbcc4",
+    "root_sha256": "219eae5b81fb2fa036b592f3826df907ca0025439bf548281da4f064d7fc5840",
+    "timestamp": "2026-09-16T21:01:44.848Z",
+    "beacon_round": 32263046,
+    "beacon_signature": "b8b5464f936ea8665fa63d5f6becd87efe3afa9a9bd0789389503ec4d37af58f1dfe4e38d6bcacf79f51a89aebedfa10",
     "case_list_root": "929baa592c4419b5e2a152e218605a181b45d136f23ef438dac0cfc59b9fdbde",
     "score": {
       "n": 60,
-      "tp": 14,
-      "fn": 1,
+      "tp": 15,
+      "fn": 0,
       "tn": 45,
       "fp": 0,
-      "sensitivity": 0.9333333333333333,
+      "sensitivity": 1,
       "specificity": 1,
-      "accuracy": 0.9833333333333333,
-      "cohen_kappa": 0.9545454545454544
-    }
+      "accuracy": 1,
+      "cohen_kappa": 1
+    },
+    "violations": {
+      "energy_discontinuity": 15
+    },
+    "canon_alg": "sorted-keys-utf8-no-ws"
   },
-  "signature": "7uVlxXBpt/Mhy41/9EHKsAkVMx1uTH1jgIftPpL6Kyl8ZuuY+akprbZmLuYULTbkeYyryK6GJYLFeYzjub1YDA==",
+  "signature": "ndY39JFE2Df2IIxlQ1mY51juq2UCufcoXpnDJU/7E7NXgQ30pOUAtfc4sSeqAc9Lx4EQIKIMKSNQVGosvMnnAw==",
   "public_key_spki_b64": "MCowBQYDK2VwAyEAJCA5iW9yKpGXUYE+qBk/nxIYtDLo8Cw6rohbkHRtWr8="
 }

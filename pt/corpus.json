@@ -9,7 +9,7 @@
     "seeded_fault": "one state displaced by 120 km along x, which breaks specific-energy consistency",
     "acceptance": "the register SHOULD report at least one violation for a seeded case and none for a clean one",
     "scoring": "sensitivity and specificity against the seeded flag, Cohen kappa alongside",
-    "reference_frame": "the reference record is published EARTH_FIXED; specific energy is an inertial invariant, so the Earth-rotation term is added to recover an inertial velocity before the register is called. Declared here before the run, not after it.",
+    "reference_frame": "the reference record is published EARTH_FIXED and is declared as such to the register, which converts it before applying any energy invariant. Declared here before the run, not after it.",
     "regime": "leo",
     "window_states": 12,
     "cases": 60,
@@ -17,7 +17,7 @@
     "fault_offset_m": 120000
   },
   "registration": {
-    "registered_at": "2026-09-16T19:28:05.409Z",
+    "registered_at": "2026-09-16T21:00:56.920Z",
     "decision_rule": {
       "domain": "orbital",
       "register": "S1.orbital_feasible via assessOrbitalFeasibility",
@@ -27,7 +27,7 @@
       "seeded_fault": "one state displaced by 120 km along x, which breaks specific-energy consistency",
       "acceptance": "the register SHOULD report at least one violation for a seeded case and none for a clean one",
       "scoring": "sensitivity and specificity against the seeded flag, Cohen kappa alongside",
-      "reference_frame": "the reference record is published EARTH_FIXED; specific energy is an inertial invariant, so the Earth-rotation term is added to recover an inertial velocity before the register is called. Declared here before the run, not after it.",
+      "reference_frame": "the reference record is published EARTH_FIXED and is declared as such to the register, which converts it before applying any energy invariant. Declared here before the run, not after it.",
       "regime": "leo",
       "window_states": 12,
       "cases": 60,
@@ -37,35 +37,36 @@
     "beacon": {
       "source": "drand quicknet",
       "chain": "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
-      "committed_round": 32261189
+      "committed_round": 32263046
     }
   },
   "beacon": {
-    "round": 32261189,
-    "signature": "97426f2626ae20793ae2392182a45105970fe406690953b0eb1f9078c6bd7a7ea5b7c3965253dd0434c3ed93ed7dbcc4",
-    "randomness": "afbd038e7453c2b77e2f3dd40ec7eebc2ef2215f84020ae0d41961b721937c71"
+    "round": 32263046,
+    "signature": "b8b5464f936ea8665fa63d5f6becd87efe3afa9a9bd0789389503ec4d37af58f1dfe4e38d6bcacf79f51a89aebedfa10",
+    "randomness": "b80b8bd3fd4beb57c09268e0ae4ae819412c8cf0b1422a06fc9cb1b469a17189"
   },
   "selection": {
     "controls": [
-      "CS-PT-O-0000",
-      "CS-PT-O-0001",
+      "CS-PT-O-0004",
+      "CS-PT-O-0006",
+      "CS-PT-O-0008",
       "CS-PT-O-0009",
-      "CS-PT-O-0011",
-      "CS-PT-O-0012",
-      "CS-PT-O-0021",
+      "CS-PT-O-0010",
+      "CS-PT-O-0015",
+      "CS-PT-O-0016",
+      "CS-PT-O-0017",
+      "CS-PT-O-0020",
       "CS-PT-O-0022",
-      "CS-PT-O-0031",
+      "CS-PT-O-0023",
+      "CS-PT-O-0030",
+      "CS-PT-O-0033",
       "CS-PT-O-0039",
-      "CS-PT-O-0043",
-      "CS-PT-O-0049",
-      "CS-PT-O-0051",
-      "CS-PT-O-0056",
-      "CS-PT-O-0058",
-      "CS-PT-O-0059"
+      "CS-PT-O-0047"
     ],
     "caseListRoot": "929baa592c4419b5e2a152e218605a181b45d136f23ef438dac0cfc59b9fdbde",
-    "seed": "4724b36f5710412f1872c5df0a4c86de60bd7da38eb632b6424e9826c7c210b8"
+    "seed": "6d7c54c1cf855e5c25a0632852edfb6ff532ee65a0122135d6efc2a1b8a00fea"
   },
+  "canon_alg": "sorted-keys-utf8-no-ws",
   "cases": [
     {
       "case_id": "CS-PT-O-0000",

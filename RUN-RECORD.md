@@ -88,3 +88,68 @@ MetaMask's manual "Add a network" flow calls it, receives `method not found`, an
 surfaces "Could not fetch chain ID" - which misdirects, since `eth_chainId`
 returns `0x107d` correctly. The faucet's one-click add is unaffected; only the
 manual path breaks.
+
+**5. CLI 0.40.0-rc.3 cannot resolve methods on a v0.2.16 contract.**
+A view call against a contract deployed with `Depends` pointing at genvm
+v0.2.16 returns:
+
+```
+ValueError: call to private method `<function Contract.__handle_undefined_method__ ...>`
+```
+
+wrapped in a `genvm execution error` with no message at the CLI surface. The
+same call against the same contract with 0.39.2 returns the record. Anyone
+checking a published contract address with a current install will conclude the
+claim is false; it is the toolchain. Pin `genlayer@0.39.2` for reads until the
+0.40 line resolves v0.2.x method tables.
+
+## Proficiency testing
+
+The attestation contract establishes that a document is the one Certisyn
+published. Whether the determination inside it is correct is a separate
+question, and `pt/` answers it with a proficiency test in the ISO/IEC 17043
+sense, run against the production orbital register.
+
+```
+16 Sep 2026   run 001   n=60   sensitivity 0.9333   specificity 0.2222
+                        register applied an inertial invariant to an
+                        EARTH_FIXED reference record
+16 Sep 2026   run 003   n=60   sensitivity 1.0000   specificity 1.0000
+                        frame declared at the type boundary and converted
+                        before any energy conclusion is drawn
+```
+
+Run 002 is not published. It ran with the frame fix in place but was signed in
+the defective canonical form described below, and a checkpoint whose signature
+does not cover its own score is not evidence. It is named here rather than
+quietly dropped.
+
+**The signing defect, and why the verifier exists.** Run 001's checkpoint was
+signed over `JSON.stringify(checkpoint, Object.keys(checkpoint).sort())`. That
+reads as a canonicaliser and is not one: the array replacer filters keys at
+every depth, so the nested `score` object serialised as `{}` and fell outside
+the signature entirely. Two checkpoints carrying entirely different scores
+produce byte-identical signing bodies, and the published sensitivity could have
+been edited with the signature still verifying.
+
+It was found by writing `pt/verify.mjs` - specifically by writing a check that
+asserts tampering *fails*, rather than one that asserts the honest document
+passes. A verifier that only tests the happy path would have reported PASS on a
+signature covering nothing.
+
+The signing form is now `canon()`: keys sorted at every depth, no whitespace,
+declared in the document as `canon_alg` so a verifier does not have to guess.
+Cross-checked byte for byte against the Python form the contract uses.
+
+**The frame defect.** Specific orbital energy is an inertial invariant.
+AUX_POEORB publishes EARTH_FIXED state vectors. The register applied the
+invariant directly to them: measured spread 23,681 J/kg against a 5,000 J/kg
+LEO budget, falling to 8,494 J/kg once the rotation term was restored. That
+flagged 35 of 45 clean orbits. The frame is now declared at the type boundary,
+converted before any energy conclusion is drawn, and held by a regression test
+that builds a known-good inclined orbit in both frames and requires the same
+conclusion from each. The inclination is load bearing - for an equatorial orbit
+the frame error cancels exactly and the test would pass while the defect stood.
+
+Both defects were found by the instrument, on the production code path, and are
+published with the run that found them rather than after a clean one.

@@ -196,6 +196,83 @@ parties with no interest in the answer.
 Naming that boundary is the point. A verification system that will not say what
 it could not determine is not offering verification; it is offering reassurance.
 
+## Proficiency testing, and how to check it yourself
+
+Attestation establishes that a document is the one Certisyn published. It says
+nothing about whether the determination inside it is right. That is a different
+question and it takes a different instrument.
+
+`pt/` carries a proficiency test in the ISO/IEC 17043 sense, run against the
+production orbital register - the same function the product calls, not a stub.
+Cases are minted from a Copernicus Sentinel-1 AUX_POEORB precise orbit. A
+quarter of them carry a seeded 120 km displacement. Which quarter is decided by
+a drand League of Entropy round that had not published when the decision rule
+was registered, so the selection was unavailable to anyone - including Certisyn
+- at the moment the rule was fixed. The run is logged as an RFC 6962 Merkle
+tree, the head is signed, and the signed document is attested by the committee.
+
+Check it yourself. Needs node, nothing else, no install:
+
+```bash
+node pt/verify.mjs
+```
+
+It fetches the checkpoint, the corpus, the drand round and the on-chain record
+from their own sources and establishes eight things:
+
+| # | check |
+|---|---|
+| 1 | the checkpoint signature verifies under the published key |
+| 2 | that signature **binds the score** - editing it breaks the signature |
+| 3 | the beacon round is real and the randomness derives from its signature |
+| 4 | the case list hashes to the committed root |
+| 5 | the control selection replays exactly from that root and that beacon |
+| 6 | the entire log replays, leaf by leaf, to the published tree head |
+| 7 | the committed round had not published when the rule was registered |
+| 8 | a committee Certisyn does not operate attested this exact document |
+
+Check 2 is not a formality. The first published checkpoint was signed with
+`JSON.stringify(obj, Object.keys(obj).sort())`, which looks like a
+canonicaliser and is not: the array replacer filters keys at every depth, so the
+nested score serialised as `{}` and fell outside the signature. Two checkpoints
+with entirely different scores produced byte-identical signing bodies. Found by
+writing the verifier, which is the argument for writing one. The signing form is
+now declared in the document as `canon_alg` and check 2 fails loudly if it ever
+regresses.
+
+Check 7 is the load-bearing one. Everything above it proves the arithmetic;
+check 7 proves the arithmetic was committed to before its input existed.
+
+### What the run found
+
+Two defects, which is the point of running it.
+
+**An interface defect.** Specific orbital energy is an inertial invariant.
+AUX_POEORB publishes EARTH_FIXED state vectors, and the register applied the
+invariant to them directly. Measured energy spread 23,681 J/kg against a
+5,000 J/kg budget, falling to 8,494 J/kg once the rotation term was restored.
+Uncorrected that flagged 35 of 45 clean orbits - specificity 0.2222. The frame
+is now declared at the type boundary and converted before any energy conclusion
+is drawn, with a regression test that fails if the conversion is removed.
+
+**A detection floor.** The first run missed one seeded fault in 15. A later run
+with a different control set missed none. One run is not a detection floor;
+characterising it takes repetition, and the runs are published as they happen
+rather than after the good one.
+
+### Reading the on-chain record
+
+```bash
+npx --yes genlayer@0.39.2 call <contract> get_latest \
+  --rpc https://rpc-asimov.genlayer.com
+```
+
+The version pin matters. GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a
+contract built against genvm v0.2.16: it answers a view call with a bare `genvm
+execution error` and no message, which reads as a failed claim when it is a
+failed toolchain. `verify.mjs` pins it for this reason and says so when it
+cannot read the chain, rather than passing quietly.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
