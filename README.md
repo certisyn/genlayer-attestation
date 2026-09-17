@@ -375,6 +375,18 @@ track share the reference record, the frame handling and the regime. **That resi
 diversity - is the part an external seeder would still buy.** Difficulty selection, headline
 selection and concealment no longer require one.
 
+## The skill
+
+`skills/certisyn-independent-verification/SKILL.md` is the agent skill this evidence supports:
+independent, pre-transaction verification of what a counterparty asserts about itself, before an
+agent commits funds, signs, delegates authority, or admits that counterparty to a deal. Four
+outcomes, a mandatory `could_not_determine` field, and a published statement of the conditions
+under which its own evidence should be ruled out.
+
+It is published here rather than described elsewhere so that it can be fetched, pinned and
+vendored from a stable public source, and so that every figure in it is checkable from this
+repository with `node pt/verify.mjs`.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
