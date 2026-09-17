@@ -2,9 +2,15 @@
 // pt/negative-test.mjs - does the verifier actually refuse?
 // =============================================================================
 // A verifier that has only ever been run against an honest document has not
-// been tested. This serves deliberately corrupted checkpoints over localhost,
-// points a copy of the real verifier at them, and requires a non-zero exit for
-// every one. Green here means the verifier catches what it claims to catch.
+// been tested. This serves deliberately corrupted catalogues over localhost,
+// points a copy of the real verifier at them, and requires a refusal for every
+// one. Green here means the verifier catches what it claims to catch.
+//
+// The corruptions are chosen to attack the three properties the scheme rests
+// on rather than to exercise the code: exhaustiveness, which is what stands in
+// for an external seeder; the floor test, which is what stops a ladder being
+// chosen to flatter; and beacon selection, which is what stops the operator
+// choosing the headline.
 //
 // Run:  node pt/negative-test.mjs
 // =============================================================================
@@ -24,36 +30,59 @@ for (const f of ['checkpoint.json', 'corpus.json']) {
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const checkpointCases = [
-  ['pooled score edited after signing', (c) => { c.checkpoint.pooled.missed = 0; c.checkpoint.pooled.sensitivity = 1; }],
-  ['a single replicate edited', (c) => { c.checkpoint.per_replicate[0].fn = 0; c.checkpoint.per_replicate[0].tp += 1; }],
+  ['the floor test flipped to hide a flattering ladder', (c) => { c.checkpoint.floor_test = !c.checkpoint.floor_test; }],
+  ['a detection floor lowered to look sharper', (c) => { c.checkpoint.detection.position_step.detection_floor = 1; }],
+  ['the trial score edited after signing', (c) => { c.checkpoint.trial.fn = 0; c.checkpoint.trial.sensitivity = 1; }],
+  ['the specificity figure edited', (c) => { c.checkpoint.specificity.false_flags = 0; c.checkpoint.specificity.rate = 1; }],
+  ['the catalogue size overstated', (c) => { c.checkpoint.catalogue_size += 100; }],
   ['tree head edited', (c) => { c.checkpoint.root_sha256 = 'a'.repeat(64); }],
   ['canon_alg removed', (c) => { delete c.checkpoint.canon_alg; }],
   ['signature replaced', (c) => { c.signature = Buffer.alloc(64, 7).toString('base64'); }],
-  ['violation counts edited', (c) => { c.checkpoint.violations = { energy_discontinuity: 1 }; }],
-  ['Wilson interval widened to hide the floor', (c) => { c.checkpoint.pooled.sensitivity_ci95 = [0.99, 1]; }],
 ];
 
 const corpusCases = [
-  ['a case removed from the corpus', (c) => { c.cases.pop(); }],
-  ['a control reclassified', (c) => {
-    const r = c.replicate_records[0];
-    const swapIn = c.cases.map((x) => x.case_id).find((id) => !r.controls.includes(id));
-    r.controls[0] = swapIn;
+  // Exhaustiveness - the property that replaces the external seeder.
+  ['the rungs the register misses deleted from the catalogue', (c) => {
+    c.catalogue = c.catalogue.filter((e) => e.family === 'clean' || e.rung >= 6);
   }],
-  ['a replicate back-dated to after its beacons', (c) => { c.replicate_records[0].registered_at = new Date(Date.now() + 86_400e3).toISOString(); }],
-  ['the decision rule rewritten after the run', (c) => { c.decision_rule.fault_offset_m = 1; }],
-  // Two shapes, deliberately. A round or pulse in the future does not exist, so
-  // the beacon answers 425 or 404; an earlier one does exist but carries a
-  // different value. The first tests that an unreadable beacon is reported as a
-  // failed check rather than aborting the run, the second that a real but wrong
-  // value is caught on its content.
-  ['a drand round swapped for one that has not published', (c) => { c.replicate_records[0].beacons.drand.committed_round += 1000; }],
-  ['a drand round swapped for an earlier real one', (c) => { c.replicate_records[0].beacons.drand.committed_round -= 1000; }],
-  ['a NIST pulse swapped for one that has not published', (c) => { c.replicate_records[0].beacons.nist.committed_pulse += 1000; }],
-  ['a NIST pulse swapped for an earlier real one', (c) => { c.replicate_records[0].beacons.nist.committed_pulse -= 100; }],
-  ['a NIST pulse output edited', (c) => { c.replicate_records[0].beacons.nist.output_value = 'f'.repeat(128); }],
-  ['a selection seed edited to justify the controls', (c) => { c.replicate_records[0].seed = '0'.repeat(64); }],
-  ['a replicate dropped from the corpus', (c) => { c.replicate_records.pop(); }],
+  ['a flattering extra entry added', (c) => {
+    c.catalogue.push({ ...c.catalogue[0], rung: 99, magnitude: 1, flagged: true, kinds: ['energy_discontinuity'] });
+  }],
+  ['an entry duplicated to double-count a detection', (c) => {
+    const hit = c.catalogue.find((e) => e.flagged);
+    c.catalogue.push(clone(hit));
+  }],
+  ['a case dropped from the case list', (c) => { c.cases.pop(); }],
+  ['a magnitude rewritten so a hard rung reads as an easy one', (c) => {
+    const e = c.catalogue.find((x) => x.family === 'position_step' && x.rung === 0);
+    e.magnitude = 300000;
+  }],
+  // The floor test - the anti-flattery property.
+  ['the missed rungs marked as detected, erasing the floor', (c) => {
+    for (const e of c.catalogue) if (!e.flagged && e.family !== 'clean') { e.flagged = true; e.kinds = ['energy_discontinuity']; }
+  }],
+  ['the published curve edited to hide the floor', (c) => {
+    const f = c.curve.position_step;
+    f.rate = f.rate.map(() => 1);
+    f.detected = f.total.slice();
+    f.detection_floor = f.rungs[0];
+  }],
+  ['a clean variant that was falsely flagged quietly relabelled', (c) => {
+    c.catalogue.find((e) => e.family === 'clean').family = 'position_step';
+  }],
+  // Beacon selection - the property that stops the operator choosing the headline.
+  ['the realised trial edited to drop the misses', (c) => {
+    c.trial.selection = c.trial.selection.map((t) => (t.family === 'clean' ? t : { ...t, rung: 11 }));
+  }],
+  ['the selection seed edited to justify the trial', (c) => { c.trial.seed = '0'.repeat(64); }],
+  ['the drand round swapped for one that has not published', (c) => { c.trial.beacons.drand.committed_round += 1000; }],
+  ['the drand round swapped for an earlier real one', (c) => { c.trial.beacons.drand.committed_round -= 1000; }],
+  ['the NIST pulse swapped for an earlier real one', (c) => { c.trial.beacons.nist.committed_pulse -= 100; }],
+  ['the registration back-dated to after the beacons', (c) => {
+    c.registered_at = new Date(Date.now() + 86_400e3).toISOString();
+  }],
+  ['the ladder rewritten after the run', (c) => { c.decision_rule.ladders.position_step.rungs[0] = 500; }],
+  ['the clean fraction rewritten to justify the trial mix', (c) => { c.decision_rule.clean_fraction = 0.5; }],
 ];
 
 const dir = mkdtempSync(join(tmpdir(), 'ptneg-'));
@@ -69,10 +98,7 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const port = server.address().port;
 
 const verifier = join(dir, 'v.mjs');
-writeFileSync(verifier, src.replace(
-  /const BASE = '[^']+';/,
-  `const BASE = 'http://127.0.0.1:${port}/pt';`,
-));
+writeFileSync(verifier, src.replace(/const BASE = '[^']+';/, `const BASE = 'http://127.0.0.1:${port}/pt';`));
 
 // spawn, not execFileSync: the corrupted documents are served by an HTTP server
 // in THIS process, and a synchronous child blocks the event loop that would
@@ -83,23 +109,23 @@ const run = () => new Promise((resolve) => {
   let out = '';
   p.stdout.on('data', (d) => { out += d; });
   p.stderr.on('data', (d) => { out += d; });
-  const t = setTimeout(() => { p.kill(); resolve({ code: -2, out }); }, 120_000);
+  const t = setTimeout(() => { p.kill(); resolve({ code: -2, out }); }, 180_000);
   p.on('close', (code) => { clearTimeout(t); resolve({ code: code ?? -1, out }); });
 });
 
 // The honest baseline cannot pass cleanly here, and that is the verifier being
-// right rather than the harness being wrong. Check 8 requires the committee to
-// have read the same URL this verifier read; served from localhost, the chain
-// says raw.githubusercontent.com and the two do not match. So the baseline
-// requirement is exact: that one check fails and nothing else does.
+// right rather than the harness being wrong. The witness check requires the
+// committee to have read the same URL this verifier read; served from
+// localhost, the chain says raw.githubusercontent.com and the two do not match.
+// So the baseline requirement is exact: that one check fails and nothing else.
 const ENDPOINT_CHECK = 'the committee read the URL this verifier read';
 const failures = (out) => out.split('\n').filter((l) => l.trim().startsWith('FAIL'))
   .map((l) => l.replace(/^\s*FAIL\s+/, '').split('   ')[0].trim());
 
 // A refusal counts whether it arrives as a named failed check or as the
 // verifier declining to finish at all (exit 2). Counting only named failures
-// scored an outright abort as a pass, which is the failure mode this harness
-// exists to find - so it is tested for here too.
+// once scored an outright abort as a pass, which is the failure mode this
+// harness exists to find - so it is tested for here too.
 const refused = ({ code, out }) => code === 2 || failures(out).some((x) => x !== ENDPOINT_CHECK);
 const reason = ({ code, out }) => {
   const f = failures(out).filter((x) => x !== ENDPOINT_CHECK);

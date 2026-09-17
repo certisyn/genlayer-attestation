@@ -1,119 +1,148 @@
 {
   "checkpoint": {
     "origin": "certisyn.com/pt/orbital",
-    "scheme_version": 2,
-    "tree_size": 70,
-    "root_sha256": "13c8ebb8fa13f36280ee1f0ce66e3636b1310244277734615b61d046a262d630",
-    "timestamp": "2026-09-16T22:06:33.302Z",
+    "scheme_version": 3,
+    "tree_size": 3003,
+    "root_sha256": "5c545d4f0ba7dcd4e95c0814e9906e98dfc427d4dcc5db2f918357f3ee132403",
+    "timestamp": "2026-09-17T07:49:29.205Z",
     "case_list_root": "929baa592c4419b5e2a152e218605a181b45d136f23ef438dac0cfc59b9fdbde",
-    "pooled": {
-      "replicates": 8,
-      "case_judgements": 480,
-      "seeded": 120,
-      "detected": 119,
-      "missed": 1,
-      "clean": 360,
-      "false_flags": 0,
-      "sensitivity": 0.9916666666666667,
-      "sensitivity_ci95": [
-        0.9543037087549504,
-        0.9985274442666578
-      ],
-      "specificity": 1,
-      "specificity_ci95": [
-        0.9894419431113063,
-        0.9999999999999998
-      ],
-      "accuracy": 0.9979166666666667,
-      "cohen_kappa": 0.9944289693593314
-    },
-    "per_replicate": [
-      {
-        "i": 1,
-        "drand_round": 32264077,
-        "nist_pulse": 1944468,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
+    "catalogue_size": 2940,
+    "detection": {
+      "position_step": {
+        "unit": "m",
+        "detection_floor": 30000,
+        "highest_missed": 10000,
+        "ladder_reaches_below_floor": true,
+        "rate": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.2833333333333333,
+          0.7666666666666667,
+          0.9166666666666666,
+          0.9833333333333333,
+          1,
+          1
+        ]
       },
-      {
-        "i": 2,
-        "drand_round": 32264112,
-        "nist_pulse": 1944469,
-        "n": 60,
-        "tp": 14,
-        "fn": 1,
-        "tn": 45,
-        "fp": 0
+      "position_drift": {
+        "unit": "m",
+        "detection_floor": 30000,
+        "highest_missed": 10000,
+        "ladder_reaches_below_floor": true,
+        "rate": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.2,
+          0.6666666666666666,
+          0.85,
+          0.9833333333333333,
+          1,
+          1
+        ]
       },
-      {
-        "i": 3,
-        "drand_round": 32264133,
-        "nist_pulse": 1944471,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
+      "velocity_step": {
+        "unit": "m/s",
+        "detection_floor": 30,
+        "highest_missed": 10,
+        "ladder_reaches_below_floor": true,
+        "rate": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.21666666666666667,
+          0.8333333333333334,
+          0.8166666666666667,
+          0.9666666666666667,
+          1,
+          1
+        ]
       },
-      {
-        "i": 4,
-        "drand_round": 32264174,
-        "nist_pulse": 1944473,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
-      },
-      {
-        "i": 5,
-        "drand_round": 32264212,
-        "nist_pulse": 1944474,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
-      },
-      {
-        "i": 6,
-        "drand_round": 32264234,
-        "nist_pulse": 1944476,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
-      },
-      {
-        "i": 7,
-        "drand_round": 32264273,
-        "nist_pulse": 1944478,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
-      },
-      {
-        "i": 8,
-        "drand_round": 32264313,
-        "nist_pulse": 1944480,
-        "n": 60,
-        "tp": 15,
-        "fn": 0,
-        "tn": 45,
-        "fp": 0
+      "time_skew": {
+        "unit": "s",
+        "detection_floor": 10,
+        "highest_missed": 5,
+        "ladder_reaches_below_floor": true,
+        "rate": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
       }
-    ],
-    "violations": {
-      "energy_discontinuity": 119
+    },
+    "floor_test": true,
+    "specificity": {
+      "clean": 60,
+      "false_flags": 0,
+      "rate": 1,
+      "ci95": [
+        0.93982814785791,
+        0.9999999999999998
+      ]
+    },
+    "trial": {
+      "drand_round": 32275987,
+      "nist_pulse": 1945063,
+      "n": 60,
+      "tp": 15,
+      "fn": 33,
+      "tn": 12,
+      "fp": 0,
+      "sensitivity": 0.3125,
+      "specificity": 1,
+      "composition": {
+        "velocity_step@30m/s": 3,
+        "time_skew@0.001s": 4,
+        "position_drift@100m": 1,
+        "velocity_step@3m/s": 3,
+        "velocity_step@0.1m/s": 3,
+        "velocity_step@0.01m/s": 4,
+        "time_skew@0.5s": 1,
+        "clean": 12,
+        "position_drift@10m": 1,
+        "velocity_step@0.3m/s": 3,
+        "position_step@300m": 2,
+        "velocity_step@300m/s": 1,
+        "velocity_step@1m/s": 2,
+        "position_step@10m": 2,
+        "time_skew@30s": 1,
+        "position_step@1000m": 1,
+        "time_skew@1s": 1,
+        "position_step@300000m": 1,
+        "velocity_step@100m/s": 1,
+        "position_step@30000m": 1,
+        "velocity_step@10m/s": 1,
+        "position_step@100000m": 1,
+        "position_drift@30m": 3,
+        "time_skew@5s": 1,
+        "time_skew@120s": 1,
+        "position_drift@1000m": 2,
+        "time_skew@10s": 1,
+        "position_drift@100000m": 1,
+        "position_drift@30000m": 1
+      }
     },
     "canon_alg": "sorted-keys-utf8-no-ws"
   },
-  "signature": "BZTRqHf/MeK+yIxuKQm/3MpP5oZOyYYDSefxiFQ1sf0AvKIF+Si6+tiipGYTDWALHCEGufw8udCQ6O8zko6BDg==",
+  "signature": "yUY/rswvImXYlqwjNTmd/xjbOw7prHnjNRPvko2fbKS6QBnHOdbW2R6hC4vQ06Slo9SCWKQWXH3sRK69vRbMAw==",
   "public_key_spki_b64": "MCowBQYDK2VwAyEAJCA5iW9yKpGXUYE+qBk/nxIYtDLo8Cw6rohbkHRtWr8="
 }

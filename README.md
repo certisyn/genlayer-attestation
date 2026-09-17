@@ -198,53 +198,113 @@ parties with no interest in the answer.
 Naming that boundary is the point. A verification system that will not say what
 it could not determine is not offering verification; it is offering reassurance.
 
-## Proficiency testing, and how to check it yourself
+## Proficiency testing without an external seeder
 
 Attestation establishes that a document is the one Certisyn published. It says nothing about
 whether the determination inside it is right. That is a different question and it takes a
 different instrument.
 
-`pt/` carries a proficiency scheme in the ISO/IEC 17043 sense, run against the production orbital
-register - the same function the product calls, not a stub. Cases are minted from a Copernicus
-Sentinel-1 AUX_POEORB precise orbit. A quarter of them carry a seeded 120 km displacement. Which
-quarter is decided by two independent public beacons that had not published when the replicate
-was registered, so the selection was unavailable to anyone - Certisyn included - at the moment
-the decision rule was fixed. The run is logged as an RFC 6962 Merkle tree, the head is signed,
-and the signed document is attested by a committee of validators Certisyn does not operate.
+The hard part of building that instrument is not the arithmetic. It is that **a proficiency
+scheme run by the party being measured lets that party choose the denominator** - which cases,
+which fault, how large. The textbook remedy is an external seeder: a second organisation
+injecting cases through normal intake. Where no second organisation exists, the usual conclusion
+is that blindness is unavailable and the numbers are worth less.
 
-### Two beacons, because they fail differently
+It is available, and it does not need a second organisation. Two properties a stranger can
+check, and one the scheme would rather not have to publish.
+
+### Exhaustiveness replaces the seeder
+
+Every point in a registered difficulty space is built and judged **before either beacon
+publishes**. Four fault families, twelve rungs each, plus a clean variant, across 60 cases from a
+Copernicus Sentinel-1 precise orbit: 2,940 evaluations, every one logged with its verdict.
+
+Exhaustiveness *is* the independence proof. A catalogue containing every point has no free
+parameter left to tune. `verify.mjs` recomputes the expected point set from the registration
+alone - before it reads a single verdict - and requires an exact match: nothing missing, nothing
+added, nothing duplicated, every magnitude equal to its registered rung.
+
+### The beacon picks the headline
+
+Which points make up the realised trial is drawn afterwards from two public beacons the scheme
+does not operate, under a rule registered before either published.
 
 | beacon | shape | period | unpublished value answers |
 |---|---|---|---|
 | drand quicknet | threshold BLS, League of Entropy, many operators | 3 s | `425 Too Early` |
 | NIST Randomness Beacon 2.0 | one US federal instrument, own hardware | 60 s | `404 Not Found` |
 
-The selection seed is `sha256(drand_randomness || nist_output || case_list_root)`. Steering the
-selection requires both operators at the same time, and the case list is already committed before
-either beacon is named, so neither can be chosen to suit the other. Certisyn operates neither
-beacon and runs no randomness service of its own.
+`seed = sha256(drand_randomness || nist_output || case_list_root)`. Steering the selection takes
+both operators at once, and the case list is committed before either beacon is named.
 
-### The published series
+### The floor test
 
-Eight replicates, 16 September 2026, register `S1.orbital_feasible`, 60 cases per replicate from
-one reference record.
+**A ladder whose lowest rung is still detected was chosen to flatter.** So every ladder must
+contain rungs the register *fails*, and `verify.mjs` fails the document if any ladder does not.
+A proficiency result that detected everything it tested has not found its floor and is not
+evidence of one.
+
+This is the check that costs something to pass, which is why it is here.
+
+### What the register actually resolves
+
+Measured 17 September 2026. Detection rate by fault magnitude, 60 cases per rung:
 
 ```
-480 case judgements   120 seeded   360 clean
+position_step (m)
+  1    3    10   30   100  300  1k   3k   10k  30k  100k 300k
+  0%   0%   0%   0%   0%   0%   28%  77%  92%  98%  100% 100%
+  floor 30 km          highest level still missed: 10 km
 
-detected     119 of 120        missed 1
-false flags    0 of 360
+position_drift (m, total across the window)
+  0%   0%   0%   0%   0%   0%   20%  67%  85%  98%  100% 100%
+  floor 30 km          highest level still missed: 10 km
 
-sensitivity  0.9917   95% CI [0.9543, 0.9985]
-specificity  1.0000   95% CI [0.9894, 1.0000]
-Cohen kappa  0.9944
+velocity_step (m/s)
+  0.001 0.003 0.01 0.03 0.1  0.3  1    3    10   30   100  300
+  0%    0%    0%   0%   0%   0%   22%  83%  82%  97%  100% 100%
+  floor 30 m/s         highest level still missed: 10 m/s
+
+time_skew (s)
+  0.001 0.01 0.1  0.5  1    2    5    10   30   60   120  300
+  0%    0%   0%   0%   0%   0%   0%   100% 100% 100% 100% 100%
+  floor 10 s           highest level still missed: 5 s
 ```
 
-The interval is Wilson, not the normal approximation. At a proportion of 1.0 the normal
-approximation returns [1, 1], which would state a detection floor of 100 percent from a finite
-sample. Wilson keeps the lower bound below 1, which is the shape of claim a bounded run can
-actually support. **The register misses roughly one seeded 120 km displacement in 120, and the
-floor is bounded at 95.4 percent, not claimed at 100.**
+```
+clean variants   60      false flags 0
+specificity      1.0000  95% CI [0.9398, 1.0000]
+FLOOR TEST       PASS    4 of 4 families contain rungs the register misses
+```
+
+Read the last row first. **This register refutes an orbital track that is inconsistent by 30 km
+or more, and it does not see 300 m.** It is a feasibility check, not precision orbit
+determination, and now it says so in numbers a relying party can design against.
+
+Three findings worth naming:
+
+- **`time_skew` is a step function at the sampling interval.** Nothing below 10 s, everything at
+  and above it. A timestamp error smaller than the cadence is invisible to this register, because
+  there is no state between two samples to contradict it. That is a structural blind spot, not a
+  tuning problem, and it is published rather than discovered later.
+- **Drift is harder than a step at every rung** - 20% against 28% at 1 km. A discontinuity is a
+  contradiction between two adjacent states; a ramp is consistent with every neighbour and only
+  contradicts the whole.
+- **`velocity_step` reads 83% at 3 m/s and 82% at 10 m/s.** The intervals overlap at n=60, so it
+  is one ladder's worth of noise rather than a reversal. It is printed as measured rather than
+  smoothed.
+
+### The realised trial
+
+```
+60 cases   tp=15 fn=33 tn=12 fp=0
+sensitivity 0.3125   specificity 1.0000
+```
+
+The beacon drew uniformly across the whole registered range, so most faulted cases it selected
+sit below the register's resolution. **That number is a property of the ladder as much as of the
+register, and it is published beside the floors rather than instead of them.** A scheme reporting
+only a headline sensitivity is reporting where it chose to sample.
 
 ### Check it yourself
 
@@ -254,83 +314,66 @@ No install, no dependencies, no permission from Certisyn:
 node pt/verify.mjs
 ```
 
-It fetches the checkpoint, the corpus, every drand round, every NIST pulse and the on-chain
-record from their own sources, and establishes thirteen things:
+Fifteen things, from the sources that issued them:
 
 | # | check |
 |---|---|
 | 1 | the checkpoint declares the canonical form it was signed in |
 | 2 | the signature verifies under the published key |
-| 3 | that signature **binds the score** - editing any published number breaks it |
-| 4 | every drand round is real and its randomness derives from its signature |
-| 5 | every NIST pulse is real and lands where the commitment said it would |
-| 6 | every selection seed is the digest of both beacon outputs and the case list |
-| 7 | every control selection replays exactly |
-| 8 | both beacon commitments postdate the replicate's registration |
-| 9 | the case list hashes to the committed root |
-| 10 | the whole log replays, leaf by leaf, to the published tree head |
-| 11 | the pooled figures recompute from the per-replicate figures |
-| 12 | the Wilson intervals recompute from the pooled counts |
-| 13 | a committee Certisyn does not operate attested this exact document |
-
-Check 3 carries weight. The first published checkpoint was signed with
-`JSON.stringify(obj, Object.keys(obj).sort())`, which reads as a canonicaliser and is not one:
-the array replacer filters keys at every depth, so the nested score serialised as `{}` and fell
-outside the signature. Two checkpoints with entirely different scores produced byte-identical
-signing bodies. The scheme found it by asserting that tampering **fails**, rather than that the
-honest document passes. The signing form is now declared in the document as `canon_alg` and
-check 3 fails loudly if it ever regresses.
-
-Check 8 is load bearing. Everything above it proves the arithmetic; check 8 proves the arithmetic
-was committed to before its inputs existed, and that moving it takes two beacon operators at once.
+| 3 | that signature binds every published figure |
+| 4 | **the catalogue is exactly the registered space** - no point missing, none added |
+| 5 | the case list hashes to the committed root |
+| 6 | the detection curve recomputes from the catalogue |
+| 7 | each detection floor recomputes from the curve |
+| 8 | **the floor test holds** - every ladder reaches below the register's floor |
+| 9 | the specificity figure recomputes from the clean variants |
+| 10 | both beacons are real and land where the commitment said |
+| 11 | both beacon commitments postdate the registration |
+| 12 | the realised trial replays exactly from those beacons |
+| 13 | the trial score recomputes from verdicts already in the catalogue |
+| 14 | the whole log replays, leaf by leaf, to the published tree head |
+| 15 | a committee Certisyn does not operate attested this exact document |
 
 ### Is the verifier itself any good?
-
-A verifier only ever run against an honest document has not been tested. `pt/negative-test.mjs`
-serves fifteen deliberately corrupted checkpoints over localhost, points a copy of `verify.mjs`
-at each one, and requires a refusal every time.
 
 ```bash
 node pt/negative-test.mjs
 ```
 
+Twenty-three deliberately corrupted catalogues served over localhost, each shown to a copy of
+`verify.mjs`, each required to be refused. The corruptions attack the three load-bearing
+properties rather than exercising the code: deleting the rungs the register misses, marking the
+misses as detected to erase the floor, adding a flattering entry, rewriting a magnitude, editing
+the trial to drop the misses, swapping a beacon for one that has not published, back-dating the
+registration.
+
 The honest baseline is required to fail exactly one check and no others - the endpoint check,
 which localhost cannot satisfy by construction. Requiring that specific single failure is a
 stronger baseline than requiring a pass.
 
-### What the scheme found
+### Where the transfers came from
 
-**An interface defect.** Specific orbital energy is an inertial invariant. AUX_POEORB publishes
-EARTH_FIXED state vectors, and the register applied the invariant to them directly: measured
-energy spread 23,681 J/kg against a 5,000 J/kg budget, falling to 8,494 J/kg once the rotation
-term was restored. Uncorrected that flagged 35 of 45 clean orbits. The frame is now declared at
-the type boundary and converted before any energy conclusion is drawn. Where a caller declares no
-frame and the track fails the budget as supplied but passes it once treated as rotating, the
-register reports that it cannot separate the two hypotheses and raises nothing - an inability is
-not a finding.
+- **Metrology, limit of detection.** A laboratory does not publish "15 of 15 spikes recovered".
+  It publishes the level at which the method detects with stated probability, over a ladder its
+  validation protocol fixes rather than the run chooses.
+- **Psychophysics, the method of constant stimuli.** Every intensity in a fixed range is
+  presented, catch trials are interleaved at a registered rate, and the output is a curve. An
+  observer cannot game a design in which every intensity appears.
+- **Clinical trials, allocation concealment.** Distinct from blinding: it asks whether the party
+  enrolling can foresee the assignment. Concealment by commitment substitutes for an independent
+  randomisation centre. Inadequate concealment is measured to exaggerate effect estimates by 30
+  to 40 percent, which is the size of the error this design avoids.
 
-**A signing defect**, described above, in the scheme's own evidence path.
+### What it still does not establish
 
-**A detection floor**, now measured rather than asserted: 119 of 120, bounded at 95.4 percent.
+The fault taxonomy is the scheme's own. A fault shape outside the four families is untested, and
+no amount of exhaustiveness inside the taxonomy closes that.
 
-### Reading the on-chain record by hand
-
-```bash
-npx --yes genlayer@0.39.2 call <contract> get_latest \
-  --rpc https://rpc-asimov.genlayer.com
-```
-
-The version pin matters. GenLayer CLI 0.40.0-rc.3 cannot resolve methods on a contract built
-against genvm v0.2.16: it answers a view call with a bare `genvm execution error` and no message,
-which reads as a failed claim when it is a failed toolchain. `verify.mjs` does not use the CLI at
-all - it posts one `gen_call` to the public RPC - and names the pin when a manual check is wanted.
-
-### What the scheme does not establish
-
-Cases are seeded openly: Certisyn mints them and knows which are controls. **Blindness requires a
-third party to inject cases through normal intake.** One register, over one reference record, on
-one day. Until an external seeder exists this is a measurement under a published method that
-anyone can replay, and it is described in exactly those words wherever it is cited.
+The textbook answer to estimating what an instrument misses is capture-recapture, and it does not
+transfer here: it needs two detectors that fail independently, and two registers over the same
+track share the reference record, the frame handling and the regime. **That residue - fault-shape
+diversity - is the part an external seeder would still buy.** Difficulty selection, headline
+selection and concealment no longer require one.
 
 ## Licence
 

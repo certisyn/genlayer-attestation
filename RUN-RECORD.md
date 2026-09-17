@@ -143,6 +143,44 @@ is Wilson rather than the normal approximation: at a proportion of 1.0 the
 normal approximation returns [1, 1], which would state a 100 percent detection
 floor from a finite sample. The published claim is a floor of 95.4 percent.
 
+**Scheme v3, and what it replaced.** Every figure above is a rate at ONE fault
+magnitude, 120 km, chosen by the scheme. That is the denominator problem: the
+party being measured picks what it is measured on, and the textbook remedy is an
+external seeder that no second organisation was available to supply.
+
+v3 removes the choice instead of outsourcing it. Four fault families, twelve
+rungs each, plus a clean variant, across 60 cases - 2,940 evaluations, every
+point in the registered space, all judged before either beacon published.
+Exhaustiveness is the independence proof: a catalogue with every point in it has
+no free parameter left to tune, and a verifier recomputes the expected point set
+from the registration alone and requires an exact match. The beacons then draw
+the realised trial, so the headline is not chosen either.
+
+```
+17 Sep 2026   catalogue v3   2,940 evaluations, 60 cases, 4 families x 12 rungs
+
+  position_step    floor 30 km     highest level still missed 10 km
+  position_drift   floor 30 km     highest level still missed 10 km
+  velocity_step    floor 30 m/s    highest level still missed 10 m/s
+  time_skew        floor 10 s      highest level still missed 5 s
+
+  clean 60, false flags 0, specificity 1.0000 [0.9398, 1.0000]
+  FLOOR TEST PASS - 4 of 4 families contain rungs the register misses
+```
+
+**The floor test.** A ladder whose lowest rung is still detected was chosen to
+flatter. Every ladder must therefore contain rungs the register fails, and the
+verifier fails the document if any ladder does not. It is the check that costs
+something to pass.
+
+**What the numbers say.** This register refutes an orbital track inconsistent by
+30 km or more, and does not see 300 m. `time_skew` is a step function at the
+sampling interval - nothing below 10 s, everything at and above it - because
+there is no state between two samples to contradict a stamp that moved less than
+the cadence. Drift is harder than a step at every rung. All three are
+specifications a relying party can design against, which a single pass rate is
+not.
+
 **The signing defect, and why the verifier exists.** Run 001's checkpoint was
 signed over `JSON.stringify(checkpoint, Object.keys(checkpoint).sort())`. That
 reads as a canonicaliser and is not one: the array replacer filters keys at
