@@ -33,7 +33,8 @@ const checkpointCases = [
   ['the floor test flipped to hide a flattering ladder', (c) => { c.checkpoint.floor_test = !c.checkpoint.floor_test; }],
   ['a detection floor lowered to look sharper', (c) => { c.checkpoint.detection.position_step.detection_floor = 1; }],
   ['the trial score edited after signing', (c) => { c.checkpoint.trial.fn = 0; c.checkpoint.trial.sensitivity = 1; }],
-  ['the specificity figure edited', (c) => { c.checkpoint.specificity.false_flags = 0; c.checkpoint.specificity.rate = 1; }],
+  ['the specificity interval narrowed to look certain', (c) => { c.checkpoint.specificity.ci95 = [1, 1]; }],
+  ['the clean-variant count inflated to dilute a false flag', (c) => { c.checkpoint.specificity.clean = 600; }],
   ['the catalogue size overstated', (c) => { c.checkpoint.catalogue_size += 100; }],
   ['tree head edited', (c) => { c.checkpoint.root_sha256 = 'a'.repeat(64); }],
   ['canon_alg removed', (c) => { delete c.checkpoint.canon_alg; }],
@@ -69,6 +70,11 @@ const corpusCases = [
   }],
   ['a clean variant that was falsely flagged quietly relabelled', (c) => {
     c.catalogue.find((e) => e.family === 'clean').family = 'position_step';
+  }],
+  ['a false flag on a clean variant hidden from the published specificity', (c) => {
+    const e = c.catalogue.find((x) => x.family === 'clean');
+    e.flagged = true;
+    e.kinds = ['energy_discontinuity'];
   }],
   // Beacon selection - the property that stops the operator choosing the headline.
   ['the realised trial edited to drop the misses', (c) => {

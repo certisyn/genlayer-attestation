@@ -340,8 +340,8 @@ Fifteen things, from the sources that issued them:
 node pt/negative-test.mjs
 ```
 
-Twenty-three deliberately corrupted catalogues served over localhost, each shown to a copy of
-`verify.mjs`, each required to be refused. The corruptions attack the three load-bearing
+Twenty-six deliberately corrupted catalogues served over localhost, each shown to a copy of
+`verify.mjs`, each required to be refused. All twenty-six are refused, each by a named check. The corruptions attack the three load-bearing
 properties rather than exercising the code: deleting the rungs the register misses, marking the
 misses as detected to erase the floor, adding a flattering entry, rewriting a magnitude, editing
 the trial to drop the misses, swapping a beacon for one that has not published, back-dating the
