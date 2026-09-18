@@ -782,9 +782,10 @@ Four things make that checkable by a stranger, and none of them needs a second o
    tune, and a checker recomputes the expected point set from the registration alone.
 3. **Let a public beacon draw the reported trial**, under a rule registered in advance, so the
    headline is not chosen either.
-4. **Make the ladder reach below your own floor.** This is the one that costs something. A ladder
-   whose lowest rung is still detected was chosen to flatter; a published result that detected
-   everything it tested has not found its floor and is not evidence of one.
+4. **Make the ladder reach below your own floor.** This is the one that costs something. If you
+   pass every test you set yourself, you set the wrong test: a ladder whose lowest rung is still
+   detected was chosen to flatter, and a published result that detected everything it tested has
+   not found its floor and is not evidence of one.
 
 Certisyn's floors for the orbital register, measured 17 September 2026 and attested by validators
 Certisyn does not operate: a positional step is detected at 30 km and not at 300 m; a timestamp
