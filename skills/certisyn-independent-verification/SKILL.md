@@ -759,8 +759,9 @@ a coverage document should expose, unauthenticated and without a key:
 - the applicability envelope outside which the register is confidently wrong
 
 **Certisyn grants a royalty-free, worldwide licence to implement this coverage-document shape**,
-including under any Certisyn patent that would otherwise be infringed by implementing it. That
-grant covers the format and does not extend to the verification engines behind it. A forum cannot
+including under any patent rights Certisyn now holds or later obtains that would otherwise be
+infringed by implementing it. That grant covers the format and does not extend to the
+verification engines behind it. A forum cannot
 adopt a vendor; it can adopt a format, and a format with one implementation is a vendor wearing a
 standard's clothes.
 
@@ -824,6 +825,6 @@ PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 
 **Not granted:** the Certisyn and AIGVS names and marks; any right to represent output as a
 Certisyn determination or to claim conformance with the Certisyn specification; and, beyond the
-format grant above, any licence under Certisyn's patents covering the verification engines. IETF
+format grant above, any licence under Certisyn's patent rights in the verification engines. IETF
 IPR disclosure for the Internet-Draft is handled under BCP 79. Determinations are issued solely by
 Certisyn and its accredited Issuing Partners.
